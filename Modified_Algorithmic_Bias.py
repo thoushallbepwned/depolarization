@@ -6,6 +6,7 @@ from collections import defaultdict
 import tqdm
 import scipy.stats as stats
 import matplotlib.pyplot as plt
+import networkx as nx
 
 __author__ = ["Alina Sirbu", "Giulio Rossetti", "Valentina Pansanella"]
 __email__ = ["alina.sirbu@unipi.it", "giulio.rossetti@isti.cnr.it", "valentina.pansanella@sns.it"]
@@ -47,8 +48,8 @@ class AlgorithmicBiasModel(DiffusionModel):
                 },
                 "mode": {
                     "descr": "Initialization mode",
-                    "range": ["normal", "polarized", "mixed"],
-                    "optional": False
+                    "range": ["normal", "polarized", "mixed", "none"],
+                    "optional": True
                 },
             },
             "nodes": {},
@@ -70,12 +71,13 @@ class AlgorithmicBiasModel(DiffusionModel):
 
 
 ######## Adding major changes here to the node seeding.
+
         #Helper functions to seed with opinions
         def polarized_distr(G, n):
             lower, upper = 0, 1  # lower and upper bounds
-            mu1, sigma1 = np.random.uniform(low=-1, high=-0.25), np.random.uniform(low=0.05,
+            mu1, sigma1 = np.random.uniform(low=0, high=0.25), np.random.uniform(low=0.15,
                                                                                    high=0.25)  # mean and standard deviation # mean and standard deviation
-            mu2, sigma2 = np.random.uniform(low=0.25, high=1), np.random.uniform(low=0.05,
+            mu2, sigma2 = np.random.uniform(low=0.75, high=1), np.random.uniform(low=0.15,
                                                                                  high=0.25)  # mean and standard deviation # mean and standard deviation
 
             X1 = stats.truncnorm(
@@ -92,18 +94,27 @@ class AlgorithmicBiasModel(DiffusionModel):
 
         def normal_distr(G, n):
             lower, upper = 0, 1  # lower and upper bounds
-            mu, sigma = np.random.uniform(low=0.25, high=0.75), np.random.uniform(low=0.5,
-                                                                                   high=0.15)  # mean and standard deviation
+            mu, sigma = np.random.uniform(low=0.25, high=0.75), np.random.uniform(low=0.05,
+                                                                                   high=0.125)  # mean and standard deviation
 
             X = stats.truncnorm(
                 (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
 
             s = X.rvs(n)
 
-
             return (s)
 
         # set node status
+
+        if self.params['model']['mode'] == 'none':
+            x = nx.get_node_attributes(self.graph, 'status')
+
+            opinions = list(x.values())
+            print(int)
+            for node in self.status:
+                self.status[node] = opinions[int(node)]
+                print(self.status[node])
+            print("nice, we can skip this")
 
         if self.params['model']['mode'] == 'normal':
             print("set to normal mode")
@@ -118,8 +129,10 @@ class AlgorithmicBiasModel(DiffusionModel):
         if self.params['model']['mode']== 'polarized':
             print("set to polarized mode")
             dist = polarized_distr(self.graph, len(self.graph.nodes()))
+            plt.hist(dist)
+            plt.show()
             for node in self.status:
-                print(node)
+                #print(node)
                 self.status[node] = dist[node]
             self.initial_status = self.status.copy()
 
@@ -132,8 +145,20 @@ class AlgorithmicBiasModel(DiffusionModel):
         if max_edgees == self.graph.number_of_edges():
             self.sts = nids[:, 1]
 
-
-
+        else:
+            for i in self.graph.nodes:
+                i_neigh = list(self.graph.neighbors(i))
+                i_ids = nids[:, 0][i_neigh]
+                i_sts = nids[:, 1][i_neigh]
+                # non uso mai node_data[:,1]
+                # per tenere aggiornato node_data() all'interno del for dovrei ciclare ogni item=nodo
+                # e se uno dei suoi vicini è n1 o n2 aggiornare l'array sts
+                # la complessità dovrebbe essere O(N)
+                # se invece uso solo actual_status, considerando che per ogni nodo ho la lista dei neighbors in memoria
+                # a ogni ciclo devo soltanto tirarmi fuori la lista degli stati degli avg_k vicini e prendere i
+                # loro stati da actual_status
+                # quindi la complessità dovrebbe essere O(N*p) < O(N)
+                # sto pensando ad un modo per farlo in O(1) ma non mi è ancora venuto in mente
 
                 self.node_data[i] = (i_ids, i_sts)
 

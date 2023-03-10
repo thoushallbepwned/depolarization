@@ -56,7 +56,7 @@ def seeding_opinions(regime):
 #        plt.show()
         for i in range(n):
              #print(s[i])
-             G.nodes[f'{i}']['opinion'] = s[i]
+             G.nodes[f'{i}']['status'] = s[i]
 
         nx.write_gml(G, f"data/graph_structures/opinion_seeded/{text}/{graph}")
 
@@ -66,10 +66,10 @@ def seeding_opinions(regime):
 
 def polarized_distr(G,n):
     lower, upper = -1, 1  # lower and upper bounds
-    mu1, sigma1 = np.random.uniform(low=-1, high=-0.25), np.random.uniform(low=0.05,
-                                                                           high=0.25)  # mean and standard deviation # mean and standard deviation
-    mu2, sigma2 = np.random.uniform(low=0.25, high=1), np.random.uniform(low=0.05,
-                                                                         high=0.25)  # mean and standard deviation # mean and standard deviation
+    mu1, sigma1 = np.random.uniform(low=0, high=0.25), np.random.uniform(low=0.05,
+                                                                           high=0.125)  # mean and standard deviation # mean and standard deviation
+    mu2, sigma2 = np.random.uniform(low=0.75, high=1), np.random.uniform(low=0.05,
+                                                                         high=0.125)  # mean and standard deviation # mean and standard deviation
 
     X1 = stats.truncnorm(
         (lower - mu1) / sigma1, (upper - mu1) / sigma1, loc=mu1, scale=sigma1)
@@ -85,7 +85,7 @@ def polarized_distr(G,n):
 
 def normal_distr(G,n):
     lower, upper = -1, 1  # lower and upper bounds
-    mu, sigma = np.random.uniform(low=-0.25, high=0.25), np.random.uniform(low=0.05,
+    mu, sigma = np.random.uniform(low=0.25, high=0.5), np.random.uniform(low=0.05,
                                                                            high=0.25)  # mean and standard deviation
 
     X = stats.truncnorm(
