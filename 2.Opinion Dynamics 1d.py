@@ -17,8 +17,8 @@ plt.matplotlib.use('Qt5Agg')
 
 # parameters governing the graph structure
 
-n = 10000 # number of nodes
-m = 10 # number of edges per node
+n = 1000 # number of nodes
+m = 8 # number of edges per node
 p = 0.15 # probability of rewiring each edge
 
 
@@ -35,17 +35,13 @@ config.add_model_parameter("mode", "polarized")
 model.set_initial_status(config)
 
 # Simulation execution
-epochs = 10
-
+epochs = 100
+nx.write_gml(g, f"data/homophily_graphs/graph__prior.gml")
 iterations = model.iteration_bunch(epochs)
 
 # print(len(iterations))
 # print((iterations[3]))
-#
-#
-# print(((iterations[1]['status'])))
-print((iterations[1]['status']))
-print((iterations[epochs-1]['status']))
+
 
 
 opinion_vector = iterations[epochs-1]['status']
@@ -63,6 +59,7 @@ print("this should be the opinions after x iterations", len(int), np.mean(int))
 plt.hist(int)
 plt.show()
 
+nx.write_gml(g, f"data/homophily_graphs/graph_1.gml")
 
 
 viz = OpinionEvolution(model, iterations)
