@@ -40,4 +40,4 @@ def create_graph(n, m, p, number):
      return()
 
 
-create_graph(1000, 10, 0.15, 3600)
+create_graph(1000, 10, 0.15, 10)

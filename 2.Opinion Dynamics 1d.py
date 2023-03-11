@@ -17,7 +17,7 @@ plt.matplotlib.use('Qt5Agg')
 
 # parameters governing the graph structure
 
-n = 10000 # number of nodes
+n = 1000 # number of nodes
 m = 10 # number of edges per node
 p = 0.15 # probability of rewiring each edge
 

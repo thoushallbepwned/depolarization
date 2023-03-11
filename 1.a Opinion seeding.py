@@ -22,7 +22,13 @@ from tqdm import tqdm
 
 # Input options ("normal", "random", "polarized")
 def seeding_opinions(regime):
-    graph_vector = os.listdir("data/graph_structures")
+
+    graph_vector = list()
+    for file in os.listdir("data/graph_structures"):
+        if file.endswith(".gml"):
+            graph_vector.append(file)
+
+    print(graph_vector)
 
     for graph in tqdm(graph_vector):
         G = nx.read_gml(f"data/graph_structures/{graph}")
@@ -98,7 +104,7 @@ def normal_distr(G,n):
 
 
 
-seeding_opinions("normal")
+seeding_opinions("random")
 #opinion_dict = {v: k for v, k in enumerate(s)}
 #print(opinion_dict)
 #nx.set_node_attributes(G, opinion_dict, name= 'opinion')
