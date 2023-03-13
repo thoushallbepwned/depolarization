@@ -119,8 +119,7 @@ class AlgorithmicBiasModel(DiffusionModel):
         if self.params['model']['mode'] == 'normal':
             print("set to normal mode")
             dist = normal_distr(self.graph, len(self.graph.nodes()))
-            plt.hist(dist)
-            plt.show()
+            # adding each opinion from distribution to graph
             for node in self.status:
                 #print(node)
                 self.status[node] = dist[node]
@@ -129,8 +128,7 @@ class AlgorithmicBiasModel(DiffusionModel):
         if self.params['model']['mode']== 'polarized':
             print("set to polarized mode")
             dist = polarized_distr(self.graph, len(self.graph.nodes()))
-            plt.hist(dist)
-            plt.show()
+
             for node in self.status:
                 #print(node)
                 self.status[node] = dist[node]

@@ -17,7 +17,7 @@ from Modified_Algorithmic_Bias import *
 
 # parameters governing the graph structure
 
-n = 10000 # number of nodes
+n = 100 # number of nodes
 m = 10 # number of edges per node
 p = 0.15 # probability of rewiring each edge
 
@@ -42,32 +42,31 @@ epochs = 100
 
 iterations = model.iteration_bunch(epochs)
 
-# print(len(iterations))
-# print((iterations[3]))
-#
-#
-# print(((iterations[1]['status'])))
-#print((iterations[1]['status']))
-#print((iterations[epochs-1]['status']))
-
-
 opinion_vector = iterations[epochs-1]['status']
-#nx.set_node_attributes(g, iterations[3], 'status')
+initial_distribution = iterations[1]['status']
+
 for nodes in g.nodes:
      g.nodes[nodes]['opinion'] = opinion_vector[nodes]
-# visualization
 
-x =nx.get_node_attributes(g, 'opinion')
+# Comparing the initial distribution of opinions with the final distribution of opinions
 
-int = list(x.values())
-#opinions = np.array(int)
-#print(type(opinions))
-print("this should be the opinions after x iterations", len(int), np.mean(int))
-plt.hist(int)
+int_dist = list(initial_distribution.values()) # this is the initial distribution of opinions
+end_dist =nx.get_node_attributes(g, 'opinion') # this is the final distribution of opinions
+end_int = list(end_dist.values())
+
+print("this should be the opinions after x iterations", len(end_int), np.mean(end_int))
+
+# visualizing the initial and final distributions of opinions
+plt.hist(int_dist)
 plt.show()
 
+plt.hist(end_int)
+plt.show()
+
+# calculating the assortativity of the graph after the opinion dynamics
 post = nx.attribute_assortativity_coefficient(g, 'opinion')
 print("assortivity after opinion dynamics is:", post)
 
+# printing pdf of opinion dynamics
 viz = OpinionEvolution(model, iterations)
 viz.plot("opinion_ev.pdf")
