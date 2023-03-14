@@ -10,19 +10,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 from Modified_Algorithmic_Bias import *
-plt.matplotlib.use('Qt5Agg')
+#plt.matplotlib.use('Qt5Agg')
 
 
 # Network topology
 
 # parameters governing the graph structure
 
-n = 1000 # number of nodes
-m = 8 # number of edges per node
+n = 10000 # number of nodes
+m = 10 # number of edges per node
 p = 0.15 # probability of rewiring each edge
 
 
 g = nx.powerlaw_cluster_graph(n, m, p) # generating Graph
+
 
 # Model selection
 model = AlgorithmicBiasModel(g)
@@ -34,14 +35,20 @@ config.add_model_parameter("gamma", 0)
 config.add_model_parameter("mode", "polarized")
 model.set_initial_status(config)
 
+prior = nx.attribute_assortativity_coefficient(g, 'opinion')
+print("assortivity before opinion dynamics is:", prior)
 # Simulation execution
 epochs = 100
-nx.write_gml(g, f"data/homophily_graphs/graph__prior.gml")
+
 iterations = model.iteration_bunch(epochs)
 
 # print(len(iterations))
 # print((iterations[3]))
-
+#
+#
+# print(((iterations[1]['status'])))
+#print((iterations[1]['status']))
+#print((iterations[epochs-1]['status']))
 
 
 opinion_vector = iterations[epochs-1]['status']
@@ -59,8 +66,8 @@ print("this should be the opinions after x iterations", len(int), np.mean(int))
 plt.hist(int)
 plt.show()
 
-nx.write_gml(g, f"data/homophily_graphs/graph_1.gml")
-
+post = nx.attribute_assortativity_coefficient(g, 'opinion')
+print("assortivity after opinion dynamics is:", post)
 
 viz = OpinionEvolution(model, iterations)
 viz.plot("opinion_ev.pdf")
