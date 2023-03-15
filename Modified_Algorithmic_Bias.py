@@ -1,5 +1,6 @@
 from ndlib.models.DiffusionModel import DiffusionModel
 import numpy as np
+import random
 from random import choice
 import future.utils
 from collections import defaultdict
@@ -8,8 +9,10 @@ import scipy.stats as stats
 import matplotlib.pyplot as plt
 import networkx as nx
 
+
 __author__ = ["Alina Sirbu", "Giulio Rossetti", "Valentina Pansanella"]
 __email__ = ["alina.sirbu@unipi.it", "giulio.rossetti@isti.cnr.it", "valentina.pansanella@sns.it"]
+#modified by Paul Verhagen
 
 
 class AlgorithmicBiasModel(DiffusionModel):
@@ -49,6 +52,11 @@ class AlgorithmicBiasModel(DiffusionModel):
                 "mode": {
                     "descr": "Initialization mode",
                     "range": ["normal", "polarized", "mixed", "none"],
+                    "optional": True
+                },
+                "noise": {
+                    "descr": "Noise",
+                    "range": [0, 0.1],
                     "optional": True
                 },
             },
@@ -119,7 +127,7 @@ class AlgorithmicBiasModel(DiffusionModel):
         if self.params['model']['mode'] == 'normal':
             print("set to normal mode")
             dist = normal_distr(self.graph, len(self.graph.nodes()))
-            plt.hist(dist)
+            plt.hist(dist, range = (0,1), bins = 50)
             plt.show()
             for node in self.status:
                 #print(node)
@@ -129,7 +137,7 @@ class AlgorithmicBiasModel(DiffusionModel):
         if self.params['model']['mode']== 'polarized':
             print("set to polarized mode")
             dist = polarized_distr(self.graph, len(self.graph.nodes()))
-            plt.hist(dist)
+            plt.hist(dist, range = (0,1), bins = 50)
             plt.show()
             for node in self.status:
                 #print(node)
@@ -208,31 +216,27 @@ class AlgorithmicBiasModel(DiffusionModel):
         # interact with peers
         for i in range(0, n):
 
-            # ho rimesso la selezione del nodo a random
+            # Selecting a random node
             # n1 = list(self.graph.nodes)[np.random.randint(0, n)]
             n1 = int(choice(self.ids))
 
             if len(self.node_data) == 0:
                 sts = self.sts
                 ids = self.ids
-                # toglie se stesso dalla lista degli id e degli status perché mi sembra rimanesse
-                # e quindi con gamma alto a volte sceglieva se stesso per interagire
+                # Removing the node selected
+                # In some cases the node would self-interact with sufficiently high gamma.
                 neigh_sts = np.delete(sts, n1)
                 neigh_ids = np.delete(ids, n1)
             else:
                 neigh_ids = self.node_data[n1][0]
                 neigh_sts = np.array([actual_status[id] for id in neigh_ids])
 
-            # ho cambiato come crea l'array degli stati
-            # niegh_sts = self.node_data[n1][1]
+            # selecting the node based on neighbors' status = self.node_data[n1][1]
+            # using neighbor_status and actual_status[n1] as parameters
+            # If we use self.status[n1] we get the previous iteration but not updated
 
-            # uso neigh_sts e actual_status[n1] come argomenti della funzione
-            # perché altrimenti self.status[n1] è quello che viene dalla precedente
-            # iterazione ma non viene aggiornato in corso di interazioni all'interno di questo for
-            # e potrebbe essere cambiato in precedenza
-            # e nel codice vecchio su usava invece lo stato sempre aggiornato
-
-            # selection_prob = self.pb1(sts, self.status[n1])
+            # Selecting a random node based on the probability
+            #print("currently targeted node is", n1)
             selection_prob = self.pb1(neigh_sts, actual_status[n1])
 
             # compute probabilities to select a second node among the neighbours
@@ -250,10 +254,38 @@ class AlgorithmicBiasModel(DiffusionModel):
             # update status of n1 and n2
             diff = np.abs(actual_status[n1] - actual_status[n2])
 
+            # Testing whether epsilon is respected
+            #if diff > self.params['model']['epsilon']:
+                #print("ERROR: Node selection opinion out of bounds")
+
             if diff < self.params['model']['epsilon']:
-                avg = (actual_status[n1] + actual_status[n2]) / 2.0
-                actual_status[n1] = avg
-                actual_status[n2] = avg
+
+                # print("Node selection within epsilon bounds")
+                # Adding a little bit of extra noise into the equation
+                if self.params['model']['noise'] > 0:
+                    avg = (actual_status[n1] + actual_status[n2]) / 2.0
+
+                    noise1 = np.random.uniform(low=0, high=avg*self.params['model']['noise'])
+                    noise2 = np.random.uniform(low=0, high=avg*self.params['model']['noise'])
+                    random_multiplier1 = random.randint(0, 1) *2 -1
+                    random_multiplier2 = random.randint(0, 1)*2 - 1
+
+
+                    actual_status[n1] = avg + noise1*random_multiplier1
+                    actual_status[n2] = avg + noise2 * random_multiplier2
+
+                    if actual_status[n1] > 1:
+                        #print("Error out of bounds for n1", actual_status[n1])
+                        actual_status[n1] = avg
+
+                    if actual_status[n2] > 1 :
+                        #print("Error out of bounds for n2", actual_status[n2])
+                        actual_status[n2] = avg
+
+                if self.params['model']['noise'] == 0:
+                    avg = (actual_status[n1] + actual_status[n2]) / 2.0
+                    actual_status[n1] = avg
+                    actual_status[n2] = avg
                 # se la rete è completa aggiorno all'interno del ciclo
                 # self.sts, così lo riprendo sempre aggiornato
                 if len(self.node_data) == 0:
