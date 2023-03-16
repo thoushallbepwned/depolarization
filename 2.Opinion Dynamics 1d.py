@@ -10,32 +10,29 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 from Modified_Algorithmic_Bias import *
-#plt.matplotlib.use('Qt5Agg')
+from Homophily_generated_networks import *
+plt.matplotlib.use('Qt5Agg')
 
 
 # Network topology
 # parameters governing the graph structure
 
-n = 60 # number of nodes
-m = 4 # number of edges per node
-p = 1 # probability of rewiring each edge
+n = 200 # number of nodes
+m = 6 # number of edges per node
+p = 0.70 # probability of rewiring each edge
+minority_fraction = 0.35 # fraction of minority nodes in the network
+similitude = 0.8 # similarity metric
 
-#g = nx.powerlaw_cluster_graph(n, m, p) # generating Graph
-g = nx.watts_strogatz_graph(n, m, p) # generating Graph
 
-#stochastic_block_model(sizes, p, nodelist=None, seed=None, directed=False, selfloops=False, sparse=True)
-G = nx.stochastic_block_model(sizes = [50,60,70], p = [[0.5,0.1,0.1],[0.1,0.5,0.1],[0.1,0.1,0.5]])
 
-nx.draw(G)
-plt.show()
-
+g = homophilic_barabasi_albert_graph(n, m, minority_fraction, similitude, p) # generating Graph
 
 # Model selection
 model = AlgorithmicBiasModel(g)
 
 # Model Configuration
 config = mc.Configuration()
-config.add_model_parameter("epsilon", 1)
+config.add_model_parameter("epsilon", 0.35)
 config.add_model_parameter("gamma", 0)
 config.add_model_parameter("mode", "polarized")
 config.add_model_parameter("noise", 0.025) # noise parameter that cannot exceed 10%
@@ -51,6 +48,12 @@ epochs = 20
 iterations = model.iteration_bunch(epochs)
 
 # Iteration extraction
+test_vector = iterations[1]['status']
+for nodes in g.nodes:
+     g.nodes[nodes]['opinion'] = test_vector[nodes]
+print("assortivity after opinion dynamics is:", nx.numeric_assortativity_coefficient(g, 'opinion'))
+print("assortivity after opinion dynamics for color", nx.attribute_assortativity_coefficient(g, 'color'))
+
 opinion_vector = iterations[epochs-1]['status']
 #nx.set_node_attributes(g, iterations[3], 'status')
 for nodes in g.nodes:
@@ -74,8 +77,9 @@ nx.draw(g, pos, node_color = int, with_labels = False,
 plt.show()
 
 
-post = nx.numeric_assortativity_coefficient(g, 'opinion') # assortativity after opinion dynamics
-print("assortivity after opinion dynamics is:", post)
+# assortativity after opinion dynamics
+print("assortivity after opinion dynamics is:", nx.numeric_assortativity_coefficient(g, 'opinion'))
+print("assortivity after opinion dynamics for color", nx.attribute_assortativity_coefficient(g, 'color'))
 
 viz = OpinionEvolution(model, iterations)
 viz.plot("opinion_ev.pdf")

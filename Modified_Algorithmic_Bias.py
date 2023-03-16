@@ -20,7 +20,7 @@ class AlgorithmicBiasModel(DiffusionModel):
     Model Parameters to be specified via ModelConfig
     :param epsilon: bounded confidence threshold from the Deffuant model, in [0,1]
     :param gamma: strength of the algorithmic bias, positive, real
-    Node states are continuous values in [0,1].
+    Node states are continuous values in [0,1]. How can I change this to become [-1,1]
     The initial state is generated randomly uniformly from the domain [0,1].
     """
 
@@ -81,6 +81,9 @@ class AlgorithmicBiasModel(DiffusionModel):
 ######## Adding major changes here to the node seeding.
 
         #Helper functions to seed with opinions
+
+        def Extract(lst):
+            return [item[0] for item in lst]
         def polarized_distr(G, n):
             lower, upper = 0, 1  # lower and upper bounds
             mu1, sigma1 = np.random.uniform(low=0, high=0.25), np.random.uniform(low=0.15,
@@ -114,6 +117,12 @@ class AlgorithmicBiasModel(DiffusionModel):
 
         # set node status
 
+        #setting node sequence based on attributes
+        array = nx.get_node_attributes(self.graph, 'color')
+        sorted_array = sorted(array.items(), key=lambda x: x[1])
+        index_list = Extract(sorted_array)
+
+
         if self.params['model']['mode'] == 'none':
             x = nx.get_node_attributes(self.graph, 'status')
 
@@ -127,19 +136,23 @@ class AlgorithmicBiasModel(DiffusionModel):
         if self.params['model']['mode'] == 'normal':
             print("set to normal mode")
             dist = normal_distr(self.graph, len(self.graph.nodes()))
+            sorted_dist = sorted(dist)
+            #print(sorted_dist)
             plt.hist(dist, range = (0,1), bins = 50)
             plt.show()
-            for node in self.status:
+            for node in index_list:
                 #print(node)
-                self.status[node] = dist[node]
+                self.status[node] = sorted_dist[node]
             self.initial_status = self.status.copy()
 
         if self.params['model']['mode']== 'polarized':
             print("set to polarized mode")
             dist = polarized_distr(self.graph, len(self.graph.nodes()))
+            sorted_dist = sorted(dist)
+
             plt.hist(dist, range = (0,1), bins = 50)
             plt.show()
-            for node in self.status:
+            for node in index_list:
                 #print(node)
                 self.status[node] = dist[node]
             self.initial_status = self.status.copy()

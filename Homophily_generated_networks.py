@@ -11,9 +11,11 @@ import random
 import bisect
 import copy
 import matplotlib.pyplot as plt
+import numpy as np
+from Modified_Algorithmic_Bias import *
 
 
-def homophilic_barabasi_albert_graph(N, m, minority_fraction, similitude, p_clustering=0.8):
+def homophilic_barabasi_albert_graph(N, m, minority_fraction, similitude, p_clustering):
     """Return homophilic random graph using BA preferential attachment model.
     A graph of n nodes is grown by attaching new nodes each with m
     edges that are preferentially attached to existing nodes with high
@@ -138,15 +140,91 @@ def _pick_targets(G, source, target_list, dist, m):
     return targets
 
 
+# defining some helper functions
+def Extract(lst):
+    return [item[0] for item in lst]
+
+
+def polarized_distr(G, n):
+    lower, upper = 0, 1  # lower and upper bounds
+    mu1, sigma1 = np.random.uniform(low=0, high=0.25), np.random.uniform(low=0.15,
+                                                                         high=0.25)  # mean and standard deviation # mean and standard deviation
+    mu2, sigma2 = np.random.uniform(low=0.75, high=1), np.random.uniform(low=0.15,
+                                                                         high=0.25)  # mean and standard deviation # mean and standard deviation
+
+    X1 = stats.truncnorm(
+        (lower - mu1) / sigma1, (upper - mu1) / sigma1, loc=mu1, scale=sigma1)
+    X2 = stats.truncnorm(
+        (lower - mu2) / sigma2, (upper - mu2) / sigma2, loc=mu2, scale=sigma2)
+
+    #count = int(n / 2)
+    s1 = X1.rvs(500)
+    s2 = X2.rvs(500)
+    s1 = 200*s1 -100
+    s2 = 200*s2 -100
+
+    s = np.append(s1, s2)
+    return (s)
+
+
+def normal_distr(G, n):
+    lower, upper = 0, 1  # lower and upper bounds
+    mu, sigma = np.random.uniform(low=0.25, high=0.75), np.random.uniform(low=0.05,
+                                                                          high=0.125)  # mean and standard deviation
+
+    X = stats.truncnorm(
+        (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
+
+    s = X.rvs(n)
+
+    return (s)
+
+
 if __name__ == '__main__':
-    graph = homophilic_barabasi_albert_graph(N=100, m=2, minority_fraction=0.2, similitude=0.8, p_clustering=0.3)
+    graph = homophilic_barabasi_albert_graph(N=1000, m=3, minority_fraction=0.32, similitude=0.8, p_clustering=1)
     print("number of nodes:", graph.number_of_nodes())
     print("number of edges:", graph.number_of_edges())
-    #post = nx.attribute_assortativity_coefficient(graph, 'color')  # assortativity after opinion dynamics
-    print("assortivity after opinion dynamics is:", nx.attribute_assortativity_coefficient(graph, 'color'))
+    print("attrtibude assortivity:", nx.attribute_assortativity_coefficient(graph, 'color'))
+    print("average degree is", np.mean(list(dict(graph.degree()).values())))
     x = nx.get_node_attributes(graph, 'color')
     int = list(x.values())
-    pos = nx.spring_layout(graph,k=5, iterations = 10, scale = 1)
-    nx.draw(graph, pos = pos, node_color = int, alpha = 0.6, node_size = 20)
+    degree_sequence = sorted((d for n, d in graph.degree()), reverse=True) # degree sequence
+    plt.hist(degree_sequence, bins=50)
     plt.show()
-    # nx.write_gexf(graph,'graph_clustering.gexf')
+
+    # testing the assortivity metrics
+    # setting node sequence based on attributes
+    array = nx.get_node_attributes(graph, 'color')
+    sorted_array = sorted(array.items(), key=lambda x: x[1])
+    index_list = Extract(sorted_array)
+
+
+    dist = polarized_distr(graph, len(graph.nodes()))
+    sorted_dist = sorted(dist)
+    graph2 = graph.copy()
+    for node in graph:
+        if graph.nodes[node]['color'] == "red":
+            graph.nodes[node]['opinion'] = 0
+        else:
+            graph.nodes[node]['opinion'] = 1
+
+    for node in index_list:
+        #print(sorted_dist[node])
+        graph2.nodes[node]['opinion'] = sorted_dist[node]
+
+
+    plt.hist(list(nx.get_node_attributes(graph, 'opinion').values()), bins=50)
+    plt.show()
+    plt.hist(list(nx.get_node_attributes(graph2, 'opinion').values()), bins=50)
+    plt.show()
+
+    print("Assortivity graph1", nx.numeric_assortativity_coefficient(graph, 'opinion'))
+    print("Assortivity graph2", nx.numeric_assortativity_coefficient(graph2, 'opinion'))
+
+
+
+    #plt.hist(dist, range=(0, 1), bins=50)
+
+
+    nx.draw(graph, node_color = int, alpha = 0.6, node_size = 20)
+    plt.show()
