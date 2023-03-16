@@ -10,27 +10,27 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.stats as stats
 from Modified_Algorithmic_Bias import *
-plt.matplotlib.use('Qt5Agg')
+#plt.matplotlib.use('Qt5Agg')
 
 
 # Network topology
 # parameters governing the graph structure
 
-n = 1000 # number of nodes
-m = 10 # number of edges per node
-p = 0.15 # probability of rewiring each edge
+n = 60 # number of nodes
+m = 4 # number of edges per node
+p = 1 # probability of rewiring each edge
 
 g = nx.powerlaw_cluster_graph(n, m, p) # generating Graph
-
+#g = nx.watts_strogatz_graph(n, m, p) # generating Graph
 
 # Model selection
 model = AlgorithmicBiasModel(g)
 
 # Model Configuration
 config = mc.Configuration()
-config.add_model_parameter("epsilon", 0.30)
+config.add_model_parameter("epsilon", 1)
 config.add_model_parameter("gamma", 0)
-config.add_model_parameter("mode", "normal")
+config.add_model_parameter("mode", "polarized")
 config.add_model_parameter("noise", 0.025) # noise parameter that cannot exceed 10%
 model.set_initial_status(config)
 
@@ -57,6 +57,15 @@ print("this should be the opinions after x iterations", type(int), np.mean(int))
 #showing distribution of opinions after opinion dynamics
 plt.hist(int, range = (0,1), bins = 50)
 plt.show()
+
+print(type(x))
+
+pos = nx.spring_layout(g, k=5, iterations = 10, scale = 10)
+nx.draw(g, pos, node_color = int, with_labels = False,
+        alpha = 0.6, node_size = 50, vmin = 0, vmax = 1)
+#nx.draw(g, node_color = int)
+plt.show()
+
 
 post = nx.numeric_assortativity_coefficient(g, 'opinion') # assortativity after opinion dynamics
 print("assortivity after opinion dynamics is:", post)

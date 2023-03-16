@@ -284,6 +284,7 @@ class AlgorithmicBiasModel(DiffusionModel):
 
                 if self.params['model']['noise'] == 0:
                     avg = (actual_status[n1] + actual_status[n2]) / 2.0
+                    #add another parameter mu here for convergence
                     actual_status[n1] = avg
                     actual_status[n2] = avg
                 # se la rete è completa aggiorno all'interno del ciclo
