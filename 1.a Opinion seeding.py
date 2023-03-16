@@ -72,10 +72,10 @@ def seeding_opinions(regime):
 
 def polarized_distr(G,n):
     lower, upper = -1, 1  # lower and upper bounds
-    mu1, sigma1 = np.random.uniform(low=0, high=0.25), np.random.uniform(low=0.05,
-                                                                           high=0.125)  # mean and standard deviation # mean and standard deviation
-    mu2, sigma2 = np.random.uniform(low=0.75, high=1), np.random.uniform(low=0.05,
-                                                                         high=0.125)  # mean and standard deviation # mean and standard deviation
+    mu1, sigma1 = np.random.uniform(low=0, high=0.25), np.random.uniform(low=0.025,
+                                                                           high=0.0125)  # mean and standard deviation # mean and standard deviation
+    mu2, sigma2 = np.random.uniform(low=0.75, high=1), np.random.uniform(low=0.025,
+                                                                         high=0.0125)  # mean and standard deviation # mean and standard deviation
 
     X1 = stats.truncnorm(
         (lower - mu1) / sigma1, (upper - mu1) / sigma1, loc=mu1, scale=sigma1)
