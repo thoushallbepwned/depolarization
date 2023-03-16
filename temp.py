@@ -20,8 +20,15 @@ n = 60 # number of nodes
 m = 4 # number of edges per node
 p = 1 # probability of rewiring each edge
 
-g = nx.powerlaw_cluster_graph(n, m, p) # generating Graph
-#g = nx.watts_strogatz_graph(n, m, p) # generating Graph
+#g = nx.powerlaw_cluster_graph(n, m, p) # generating Graph
+g = nx.watts_strogatz_graph(n, m, p) # generating Graph
+
+#stochastic_block_model(sizes, p, nodelist=None, seed=None, directed=False, selfloops=False, sparse=True)
+G = nx.stochastic_block_model(sizes = [50,60,70], p = [[0.5,0.1,0.1],[0.1,0.5,0.1],[0.1,0.1,0.5]])
+
+nx.draw(G)
+plt.show()
+
 
 # Model selection
 model = AlgorithmicBiasModel(g)
