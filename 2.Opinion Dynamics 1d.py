@@ -36,11 +36,8 @@ config.add_model_parameter("epsilon", 0.35)
 config.add_model_parameter("gamma", 0)
 config.add_model_parameter("mode", "polarized")
 config.add_model_parameter("noise", 0.025) # noise parameter that cannot exceed 10%
+config.add_model_parameter("minority_fraction", 0.35) # minority fraction in the network
 model.set_initial_status(config)
-
-
-#prior  = nx.numeric_assortativity_coefficient(g, "opinion")
-#print("assortivity before opinion dynamics is:", prior)
 
 # Simulation execution
 epochs = 20
@@ -49,13 +46,16 @@ iterations = model.iteration_bunch(epochs)
 
 # Iteration extraction
 test_vector = iterations[1]['status']
+print(test_vector)
 for nodes in g.nodes:
      g.nodes[nodes]['opinion'] = test_vector[nodes]
-print("assortivity after opinion dynamics is:", nx.numeric_assortativity_coefficient(g, 'opinion'))
-print("assortivity after opinion dynamics for color", nx.attribute_assortativity_coefficient(g, 'color'))
+
+
+#print("assortivity after opinion dynamics for color", nx.attribute_assortativity_coefficient(g, 'color'))
 
 opinion_vector = iterations[epochs-1]['status']
-#nx.set_node_attributes(g, iterations[3], 'status')
+
+
 for nodes in g.nodes:
      g.nodes[nodes]['opinion'] = opinion_vector[nodes]
 

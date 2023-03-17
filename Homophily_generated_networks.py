@@ -13,6 +13,7 @@ import copy
 import matplotlib.pyplot as plt
 import numpy as np
 from Modified_Algorithmic_Bias import *
+from collections import Counter
 
 
 def homophilic_barabasi_albert_graph(N, m, minority_fraction, similitude, p_clustering):
@@ -147,21 +148,22 @@ def Extract(lst):
 
 def polarized_distr(G, n):
     lower, upper = 0, 1  # lower and upper bounds
-    mu1, sigma1 = np.random.uniform(low=0, high=0.25), np.random.uniform(low=0.15,
-                                                                         high=0.25)  # mean and standard deviation # mean and standard deviation
-    mu2, sigma2 = np.random.uniform(low=0.75, high=1), np.random.uniform(low=0.15,
-                                                                         high=0.25)  # mean and standard deviation # mean and standard deviation
+    mu1, sigma1 = np.random.uniform(low=0, high=0.25), np.random.uniform(low=0.0625,
+                                                                         high=0.125)  # mean and standard deviation # mean and standard deviation
+    mu2, sigma2 = np.random.uniform(low=0.75, high=1), np.random.uniform(low=0.0625,
+                                                                         high=0.125)  # mean and standard deviation # mean and standard deviation
 
     X1 = stats.truncnorm(
         (lower - mu1) / sigma1, (upper - mu1) / sigma1, loc=mu1, scale=sigma1)
     X2 = stats.truncnorm(
         (lower - mu2) / sigma2, (upper - mu2) / sigma2, loc=mu2, scale=sigma2)
 
-    #count = int(n / 2)
+    #count = n / 2
+    #print(type(count))
     s1 = X1.rvs(500)
     s2 = X2.rvs(500)
-    s1 = 200*s1 -100
-    s2 = 200*s2 -100
+    s1 = s1
+    s2 = s2
 
     s = np.append(s1, s2)
     return (s)
@@ -180,51 +182,65 @@ def normal_distr(G, n):
     return (s)
 
 
-if __name__ == '__main__':
-    graph = homophilic_barabasi_albert_graph(N=1000, m=3, minority_fraction=0.32, similitude=0.8, p_clustering=1)
-    print("number of nodes:", graph.number_of_nodes())
-    print("number of edges:", graph.number_of_edges())
-    print("attrtibude assortivity:", nx.attribute_assortativity_coefficient(graph, 'color'))
-    print("average degree is", np.mean(list(dict(graph.degree()).values())))
-    x = nx.get_node_attributes(graph, 'color')
-    int = list(x.values())
-    degree_sequence = sorted((d for n, d in graph.degree()), reverse=True) # degree sequence
-    plt.hist(degree_sequence, bins=50)
-    plt.show()
+#if __name__ == '__main__':
+    # #graph = homophilic_barabasi_albert_graph(N=1000, m=3, minority_fraction=0.5, similitude=0.8, p_clustering=0.8)
+    # print("number of nodes:", graph.number_of_nodes())
+    # print("number of edges:", graph.number_of_edges())
+    # print("attrtibude assortivity:", nx.attribute_assortativity_coefficient(graph, 'color'))
+    # print("average degree is", np.mean(list(dict(graph.degree()).values())))
+    # x = nx.get_node_attributes(graph, 'color')
+    # int = list(x.values())
 
-    # testing the assortivity metrics
-    # setting node sequence based on attributes
-    array = nx.get_node_attributes(graph, 'color')
-    sorted_array = sorted(array.items(), key=lambda x: x[1])
-    index_list = Extract(sorted_array)
-
-
-    dist = polarized_distr(graph, len(graph.nodes()))
-    sorted_dist = sorted(dist)
-    graph2 = graph.copy()
-    for node in graph:
-        if graph.nodes[node]['color'] == "red":
-            graph.nodes[node]['opinion'] = 0
-        else:
-            graph.nodes[node]['opinion'] = 1
-
-    for node in index_list:
-        #print(sorted_dist[node])
-        graph2.nodes[node]['opinion'] = sorted_dist[node]
+    # # testing the assortivity metrics
+    #
+    # # setting node sequence based on attributes
+    # array = nx.get_node_attributes(graph, 'color')
+    # sorted_array = sorted(array.items(), key=lambda x: x[1])
+    # index_list = Extract(sorted_array) # list of nodes sorted by color
+    #
+    # dist = normal_distr(graph, len(graph.nodes)) # list of nodes sorted by opinion
+    # sorted_dist = sorted(dist) # list of nodes sorted by opinion
 
 
-    plt.hist(list(nx.get_node_attributes(graph, 'opinion').values()), bins=50)
-    plt.show()
-    plt.hist(list(nx.get_node_attributes(graph2, 'opinion').values()), bins=50)
-    plt.show()
+    # setting node sequence based on attributes for opinion distribution in order
+    # i = 0
+    # for node in index_list:
+    #     #print(node)
+    #     #print(sorted_dist[node])
+    #     graph.nodes[node]['opinion'] =sorted_dist[i]
+    #     i += 1
 
-    print("Assortivity graph1", nx.numeric_assortativity_coefficient(graph, 'opinion'))
-    print("Assortivity graph2", nx.numeric_assortativity_coefficient(graph2, 'opinion'))
+    # Obsolete code designed to test the assortivity metrics
+    # setting node sequence based on attributes based on logic rules
+    # for node in graph:
+    #     if graph.nodes[node]['color'] == "red":
+    #         graph.nodes[node]['opinion'] = 0
+    #     else:
+    #         graph.nodes[node]['opinion'] = 1
+    #
+    # for node in graph:
+    #     if graph.nodes[node]['color'] == "red" and graph.nodes[node]['opinion'] != 0:
+    #         print("error")
+    #
+    # # setting node sequence based on attributes for opinion distribution
+    # i = 0
 
 
+    #visualization code, now hashed out
 
-    #plt.hist(dist, range=(0, 1), bins=50)
+    # plt.hist(list(nx.get_node_attributes(graph, 'opinion').values()), bins=50)
+    # plt.show()
 
+    # print("Assortivity graph1", nx.numeric_assortativity_coefficient(graph, 'opinion'))
+    #print("Assortivity graph2", nx.numeric_assortativity_coefficient(graph, 'opinion'))
 
-    nx.draw(graph, node_color = int, alpha = 0.6, node_size = 20)
-    plt.show()
+    # opinions = nx.get_node_attributes(graph, 'opinion')
+    # opinion_list = list(opinions.values())
+    # plt.hist(opinion_list, bins=50)
+    # plt.show()
+    #
+    # # #Drawing the graph based on opinion
+    # nx.draw(graph, node_color = int, alpha = 0.6, node_size = 60)
+    # plt.show()
+    # nx.draw(graph, node_color=opinion_list, alpha=0.6, node_size=60)
+    # plt.show()

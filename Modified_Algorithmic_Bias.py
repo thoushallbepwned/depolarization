@@ -59,6 +59,11 @@ class AlgorithmicBiasModel(DiffusionModel):
                     "range": [0, 0.1],
                     "optional": True
                 },
+                "minority_fraction": {
+                    "descr": "Minority fraction",
+                    "range": [0, 1],
+                    "optional": False
+                },
             },
             "nodes": {},
             "edges": {}
@@ -84,7 +89,7 @@ class AlgorithmicBiasModel(DiffusionModel):
 
         def Extract(lst):
             return [item[0] for item in lst]
-        def polarized_distr(G, n):
+        def polarized_distr(G, n, minority_fraction):
             lower, upper = 0, 1  # lower and upper bounds
             mu1, sigma1 = np.random.uniform(low=0, high=0.25), np.random.uniform(low=0.15,
                                                                                    high=0.25)  # mean and standard deviation # mean and standard deviation
@@ -96,9 +101,10 @@ class AlgorithmicBiasModel(DiffusionModel):
             X2 = stats.truncnorm(
                 (lower - mu2) / sigma2, (upper - mu2) / sigma2, loc=mu2, scale=sigma2)
 
-            count = int(n / 2)
-            s1 = X1.rvs(count)
-            s2 = X2.rvs(count)
+            count1 = int(n*minority_fraction)
+            count2 = int(n*(1-minority_fraction))
+            s1 = X1.rvs(count1)
+            s2 = X2.rvs(n*(count2))
 
             s = np.append(s1, s2)
             return (s)
@@ -140,22 +146,28 @@ class AlgorithmicBiasModel(DiffusionModel):
             #print(sorted_dist)
             plt.hist(dist, range = (0,1), bins = 50)
             plt.show()
+            i = 0
             for node in index_list:
                 #print(node)
-                self.status[node] = sorted_dist[node]
+                self.status[node] = sorted_dist[i]
+                i += 1
             self.initial_status = self.status.copy()
 
         if self.params['model']['mode']== 'polarized':
             print("set to polarized mode")
-            dist = polarized_distr(self.graph, len(self.graph.nodes()))
+            dist = polarized_distr(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'])
             sorted_dist = sorted(dist)
 
             plt.hist(dist, range = (0,1), bins = 50)
             plt.show()
+
+            i = 0
             for node in index_list:
                 #print(node)
-                self.status[node] = dist[node]
+                self.status[node] = dist[i]
+                i += 1
             self.initial_status = self.status.copy()
+
 
         ### Initialization numpy representation
 
