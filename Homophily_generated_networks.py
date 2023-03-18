@@ -146,40 +146,40 @@ def Extract(lst):
     return [item[0] for item in lst]
 
 
-def polarized_distr(G, n):
-    lower, upper = 0, 1  # lower and upper bounds
-    mu1, sigma1 = np.random.uniform(low=0, high=0.25), np.random.uniform(low=0.0625,
-                                                                         high=0.125)  # mean and standard deviation # mean and standard deviation
-    mu2, sigma2 = np.random.uniform(low=0.75, high=1), np.random.uniform(low=0.0625,
-                                                                         high=0.125)  # mean and standard deviation # mean and standard deviation
-
-    X1 = stats.truncnorm(
-        (lower - mu1) / sigma1, (upper - mu1) / sigma1, loc=mu1, scale=sigma1)
-    X2 = stats.truncnorm(
-        (lower - mu2) / sigma2, (upper - mu2) / sigma2, loc=mu2, scale=sigma2)
-
-    #count = n / 2
-    #print(type(count))
-    s1 = X1.rvs(500)
-    s2 = X2.rvs(500)
-    s1 = s1
-    s2 = s2
-
-    s = np.append(s1, s2)
-    return (s)
-
-
-def normal_distr(G, n):
-    lower, upper = 0, 1  # lower and upper bounds
-    mu, sigma = np.random.uniform(low=0.25, high=0.75), np.random.uniform(low=0.05,
-                                                                          high=0.125)  # mean and standard deviation
-
-    X = stats.truncnorm(
-        (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
-
-    s = X.rvs(n)
-
-    return (s)
+# def polarized_distr(G, n):
+#     lower, upper = 0, 1  # lower and upper bounds
+#     mu1, sigma1 = np.random.uniform(low=0, high=0.25), np.random.uniform(low=0.0625,
+#                                                                          high=0.125)  # mean and standard deviation # mean and standard deviation
+#     mu2, sigma2 = np.random.uniform(low=0.75, high=1), np.random.uniform(low=0.0625,
+#                                                                          high=0.125)  # mean and standard deviation # mean and standard deviation
+#
+#     X1 = stats.truncnorm(
+#         (lower - mu1) / sigma1, (upper - mu1) / sigma1, loc=mu1, scale=sigma1)
+#     X2 = stats.truncnorm(
+#         (lower - mu2) / sigma2, (upper - mu2) / sigma2, loc=mu2, scale=sigma2)
+#
+#     #count = n / 2
+#     #print(type(count))
+#     s1 = X1.rvs(500)
+#     s2 = X2.rvs(500)
+#     s1 = s1
+#     s2 = s2
+#
+#     s = np.append(s1, s2)
+#     return (s)
+#
+#
+# def normal_distr(G, n):
+#     lower, upper = 0, 1  # lower and upper bounds
+#     mu, sigma = np.random.uniform(low=0.25, high=0.75), np.random.uniform(low=0.05,
+#                                                                           high=0.125)  # mean and standard deviation
+#
+#     X = stats.truncnorm(
+#         (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
+#
+#     s = X.rvs(n)
+#
+#     return (s)
 
 
 #if __name__ == '__main__':

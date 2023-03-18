@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import scipy.stats as stats
 from Modified_Algorithmic_Bias import *
 from Homophily_generated_networks import *
-plt.matplotlib.use('Qt5Agg')
+#plt.matplotlib.use('Qt5Agg')
 
 
 # Network topology
@@ -41,18 +41,28 @@ model.set_initial_status(config)
 
 # Simulation execution
 epochs = 20
-
 iterations = model.iteration_bunch(epochs)
 
 # Iteration extraction
 test_vector = iterations[1]['status']
-print(test_vector)
-for nodes in g.nodes:
-     g.nodes[nodes]['opinion'] = test_vector[nodes]
+control_graph = g.copy()
+
+color_list = nx.get_node_attributes(control_graph, 'color')
+
+for i in range(len(color_list)):
+    if color_list[i] == 'red' and test_vector[i] == 0:
+        print("error red")
+    if color_list[i] == 'blue' and test_vector[i] == 1:
+        print("error blue")
 
 
-#print("assortivity after opinion dynamics for color", nx.attribute_assortativity_coefficient(g, 'color'))
 
+
+for nodes in control_graph.nodes:
+     control_graph.nodes[nodes]['opinion'] = test_vector[nodes]
+
+print("assortivity before opinion dynamics for color", nx.attribute_assortativity_coefficient(control_graph, 'color'))
+print("assortivity before opinion dynamics for opinion", nx.numeric_assortativity_coefficient(control_graph, 'opinion'))
 opinion_vector = iterations[epochs-1]['status']
 
 
@@ -62,13 +72,11 @@ for nodes in g.nodes:
 # visualization
 x =nx.get_node_attributes(g, 'opinion')
 int = list(x.values())
-print("this should be the opinions after x iterations", type(int), np.mean(int))
+print("this should be the opinions after x iterations", np.mean(int))
 
 #showing distribution of opinions after opinion dynamics
 plt.hist(int, range = (0,1), bins = 50)
 plt.show()
-
-print(type(x))
 
 pos = nx.spring_layout(g, k=5, iterations = 10, scale = 10)
 nx.draw(g, pos, node_color = int, with_labels = False,
