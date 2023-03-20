@@ -13,6 +13,7 @@ from Modified_Algorithmic_Bias import *
 from Homophily_generated_networks import *
 from collections import Counter
 plt.matplotlib.use('Qt5Agg')
+from tqdm import tqdm
 
 
 # Network topology
@@ -21,7 +22,7 @@ plt.matplotlib.use('Qt5Agg')
 n = 1000 # number of nodes Note: This should be an even number to ensure stability
 m = 6 # number of edges per node
 p = 0.70 # probability of rewiring each edge
-minority_fraction = 0.35 # fraction of minority nodes in the network
+minority_fraction = 0.5 # fraction of minority nodes in the network
 similitude = 0.8 # similarity metric
 
 
@@ -33,16 +34,16 @@ model = AlgorithmicBiasModel(g)
 
 # Model Configuration
 config = mc.Configuration()
-config.add_model_parameter("epsilon", 1) #bounded confidence parameter
-config.add_model_parameter("mu", 0.5) #convergence parameter
+config.add_model_parameter("epsilon", 0.3) #bounded confidence parameter
+config.add_model_parameter("mu", 0.35) #convergence parameter
 config.add_model_parameter("gamma", 0) #bias parameter
-config.add_model_parameter("mode", "normal") #initial opinion distribution
-config.add_model_parameter("noise", 0) # noise parameter that cannot exceed 10%
-config.add_model_parameter("minority_fraction", 0.5) # minority fraction in the network
+config.add_model_parameter("mode", "polarized") #initial opinion distribution
+config.add_model_parameter("noise", 0.005) # noise parameter that cannot exceed 10%
+config.add_model_parameter("minority_fraction", minority_fraction) # minority fraction in the network
 model.set_initial_status(config)
 
 # Simulation execution
-epochs = 20
+epochs = 50
 iterations = model.iteration_bunch(epochs)
 
 # Iteration extraction
@@ -69,10 +70,11 @@ int = list(x.values())
 #showing distribution of opinions after opinion dynamics
 plt.hist(int, range = (-1,1), bins = 50)
 plt.show()
+plt.close()
 
 pos = nx.spring_layout(g, k=5, iterations = 10, scale = 10)
-nx.draw(g, pos, node_color = int, with_labels = False,
-        alpha = 0.6, node_size = 50, vmin = 0, vmax = 1)
+nx.draw(g, node_color = int, with_labels = False,
+       alpha = 0.6, node_size = 50, vmin = 0, vmax = 1)
 #nx.draw(g, node_color = int)
 plt.show()
 

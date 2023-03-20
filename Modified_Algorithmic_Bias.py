@@ -41,14 +41,10 @@ class AlgorithmicBiasModel(DiffusionModel):
             "model": {
                 "epsilon": {
                     "descr": "Bounded confidence threshold",
-                    "range": [0, 1],
+                    "range": [0, 2],
                     "optional": False
                 },
-                "gamma": {
-                    "descr": "Algorithmic bias",
-                    "range": [0, 100],
-                    "optional": False
-                },
+
                 "mode": {
                     "descr": "Initialization mode",
                     "range": ["normal", "polarized", "mixed", "none"],
@@ -67,6 +63,11 @@ class AlgorithmicBiasModel(DiffusionModel):
                 "mu": {
                     "descr": "Convergence parameter",
                     "range": [0, 1],
+                    "optional": False
+                },
+                "gamma": {
+                    "descr": "Algorithmic bias",
+                    "range": [0, 100],
                     "optional": False
                 },
             },
@@ -135,6 +136,11 @@ class AlgorithmicBiasModel(DiffusionModel):
         array = nx.get_node_attributes(self.graph, 'color')
         sorted_array = sorted(array.items(), key=lambda x: x[1])
         index_list = Extract(sorted_array)
+
+        if self.params['model']['epsilon'] == 0:
+            print("running in noiseless mode")
+        else:
+            print("running in noisy mode")
 
         if self.params['model']['mode'] == 'none':
             x = nx.get_node_attributes(self.graph, 'status')
@@ -240,6 +246,7 @@ class AlgorithmicBiasModel(DiffusionModel):
         # - if the two agents have a distance smaller than epsilon, then they change their status to the average of
         # their previous statuses
 
+
         actual_status = self.status.copy()
 
         if self.actual_iteration == 0:
@@ -297,11 +304,12 @@ class AlgorithmicBiasModel(DiffusionModel):
             n2 = int(neigh_ids[n2])
 
             # update status of n1 and n2
-            diff = np.abs(actual_status[n1] - actual_status[n2])
+            diff = np.abs((actual_status[n1]+2) - (actual_status[n2]+2))
 
             # Testing whether epsilon is respected
-            #if diff > self.params['model']['epsilon']:
-                #print("ERROR: Node selection opinion out of bounds")
+            # if diff > self.params['model']['epsilon']:
+            #     print("ERROR: Node selection opinion out of bounds")
+
 
             if diff < self.params['model']['epsilon']:
 
@@ -309,17 +317,17 @@ class AlgorithmicBiasModel(DiffusionModel):
 
                 # Adding a little bit of extra noise into the equation
                 if self.params['model']['noise'] > 0:
-                    change = self.params['model']['mu'] *(actual_status[n2] - actual_status[n1])
+                    change = ((actual_status[n2]+2) - (actual_status[n1]+2))
+
 
                     noise1 = np.random.uniform(low=-1*change*self.params['model']['noise'], high=change*self.params['model']['noise'])
                     noise2 = np.random.uniform(low=-1*change*self.params['model']['noise'], high=change*self.params['model']['noise'])
 
 
+                    actual_status[n1] = actual_status[n1]+ self.params['model']['mu']*change + noise1
+                    actual_status[n2] = actual_status[n2]#- self.params['model']['mu']*change + noise2
 
-                    actual_status[n1] = actual_status[n1]+ change + noise1
-                    actual_status[n2] = actual_status[n2]+ change + noise2
-
-                    #truncating the outcomes
+                    #Truncating the outcomes
 
                     if actual_status[n1] > 1:
                         #print("Error out of bounds for n1", actual_status[n1])
@@ -338,10 +346,26 @@ class AlgorithmicBiasModel(DiffusionModel):
                         actual_status[n2] = 1
 
                 if self.params['model']['noise'] == 0:
-                    change = self.params['model']['mu'] *(actual_status[n2] - actual_status[n1])
-                    #add another parameter mu here for convergence
-                    actual_status[n1] = actual_status[n1]+ change
-                    actual_status[n2] = actual_status[n2]+ change
+
+                    # Testing some ways to see if the absolute difference is screwing things up
+                    change = (actual_status[n2]+10) - (actual_status[n1]+10)
+                    pos1 = actual_status[n1]
+                    pos2 = actual_status[n2]
+
+        #########################################
+                    #THIS EQUATION IS SUPER IMPORTANT
+
+                    #if actual_status[n1] > actual_status[n2]:
+                    actual_status[n1] = pos1 + self.params['model']['mu']*change
+                    actual_status[n2] = pos2
+                    #actual_status[n2] = pos2 + self.params['model']['mu']*change
+
+                    # else:
+                    #     actual_status[n1] = actual_status[n1] + change
+                    #     actual_status[n2] = actual_status[n2] + change
+                    #actual_status[n1] = actual_status[n1]+ change
+                    #actual_status[n2] = actual_status[n2]+ change
+
                     if actual_status[n1] > 1:
                         #print("Error out of bounds for n1", actual_status[n1])
                         actual_status[n1] = 1
