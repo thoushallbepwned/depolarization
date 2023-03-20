@@ -89,6 +89,7 @@ class AlgorithmicBiasModel(DiffusionModel):
 
         def Extract(lst):
             return [item[0] for item in lst]
+
         def polarized_distr(G, n, minority_fraction):
             lower, upper = 0, 1  # lower and upper bounds
             mu1, sigma1 = np.random.uniform(low=0, high=0.25), np.random.uniform(low=0.15,
@@ -103,8 +104,9 @@ class AlgorithmicBiasModel(DiffusionModel):
 
             count1 = int(n*minority_fraction)
             count2 = int(n*(1-minority_fraction))
+
             s1 = X1.rvs(count1)
-            s2 = X2.rvs(n*(count2))
+            s2 = X2.rvs(count2)
 
             s = np.append(s1, s2)
             return (s)
@@ -128,7 +130,6 @@ class AlgorithmicBiasModel(DiffusionModel):
         sorted_array = sorted(array.items(), key=lambda x: x[1])
         index_list = Extract(sorted_array)
 
-
         if self.params['model']['mode'] == 'none':
             x = nx.get_node_attributes(self.graph, 'status')
 
@@ -143,31 +144,38 @@ class AlgorithmicBiasModel(DiffusionModel):
             print("set to normal mode")
             dist = normal_distr(self.graph, len(self.graph.nodes()))
             sorted_dist = sorted(dist)
-            #print(sorted_dist)
+
             plt.hist(dist, range = (0,1), bins = 50)
             plt.show()
             i = 0
             for node in index_list:
-                #print(node)
                 self.status[node] = sorted_dist[i]
                 i += 1
             self.initial_status = self.status.copy()
 
-        if self.params['model']['mode']== 'polarized':
+        if self.params['model']['mode'] == 'polarized':
             print("set to polarized mode")
+
             dist = polarized_distr(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'])
             sorted_dist = sorted(dist)
 
+            sorted_dist_round = np.round(sorted_dist)
             plt.hist(dist, range = (0,1), bins = 50)
-            plt.show()
+            plt.show( )
 
             i = 0
             for node in index_list:
-                #print(node)
-                self.status[node] = dist[i]
+
+                self.status[node] = sorted_dist_round[i]
+                #print(self.status[node])
+
                 i += 1
             self.initial_status = self.status.copy()
 
+        ### Trying to pull out the seeded graph status??
+
+        print(self.initial_status)
+        print(nx.get_node_attributes(self.graph, 'color'))
 
         ### Initialization numpy representation
 
@@ -237,6 +245,10 @@ class AlgorithmicBiasModel(DiffusionModel):
                         "node_count": node_count.copy(), "status_delta": status_delta.copy()}
 
         n = self.graph.number_of_nodes()
+
+        #testing the assortivity:
+        #print("getting node attrtibudes", nx.get_node_attributes(self.graph, 'status'))
+        #print("assortivity before opinion dynamics", nx.numeric_assortativity_coefficient(self.graph, 'status'))
 
         # interact with peers
         for i in range(0, n):
