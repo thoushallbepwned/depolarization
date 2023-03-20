@@ -64,6 +64,11 @@ class AlgorithmicBiasModel(DiffusionModel):
                     "range": [0, 1],
                     "optional": False
                 },
+                "mu": {
+                    "descr": "Convergence parameter",
+                    "range": [0, 1],
+                    "optional": False
+                },
             },
             "nodes": {},
             "edges": {}
@@ -91,19 +96,20 @@ class AlgorithmicBiasModel(DiffusionModel):
             return [item[0] for item in lst]
 
         def polarized_distr(G, n, minority_fraction):
-            lower, upper = 0, 1  # lower and upper bounds
-            mu1, sigma1 = np.random.uniform(low=0, high=0.25), np.random.uniform(low=0.15,
-                                                                                   high=0.25)  # mean and standard deviation # mean and standard deviation
-            mu2, sigma2 = np.random.uniform(low=0.75, high=1), np.random.uniform(low=0.15,
-                                                                                 high=0.25)  # mean and standard deviation # mean and standard deviation
+            lower, upper = -1, 1  # lower and upper bounds
+            mu1, sigma1 = np.random.uniform(low=-0.9, high=-0.1), np.random.uniform(low=0.0675,
+                                                                                   high=0.175)  # mean and standard deviation # mean and standard deviation
+            mu2, sigma2 = np.random.uniform(low=0.1, high=0.9), np.random.uniform(low=0.0675,
+                                                                                 high=0.175)  # mean and standard deviation # mean and standard deviation
 
             X1 = stats.truncnorm(
                 (lower - mu1) / sigma1, (upper - mu1) / sigma1, loc=mu1, scale=sigma1)
             X2 = stats.truncnorm(
                 (lower - mu2) / sigma2, (upper - mu2) / sigma2, loc=mu2, scale=sigma2)
 
-            count1 = int(n*minority_fraction)
-            count2 = int(n*(1-minority_fraction))
+            count2 = int(n*minority_fraction)
+            count1 = int(n*(1-minority_fraction))
+            #print(" Node class 1:", count1, "Node class 2:", count2)
 
             s1 = X1.rvs(count1)
             s2 = X2.rvs(count2)
@@ -112,9 +118,9 @@ class AlgorithmicBiasModel(DiffusionModel):
             return (s)
 
         def normal_distr(G, n):
-            lower, upper = 0, 1  # lower and upper bounds
-            mu, sigma = np.random.uniform(low=0.25, high=0.75), np.random.uniform(low=0.05,
-                                                                                   high=0.125)  # mean and standard deviation
+            lower, upper = -1, 1  # lower and upper bounds
+            mu, sigma = np.random.uniform(low=-0.25, high=0.25), np.random.uniform(low=0.1,
+                                                                                   high=0.25)  # mean and standard deviation
 
             X = stats.truncnorm(
                 (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
@@ -145,7 +151,7 @@ class AlgorithmicBiasModel(DiffusionModel):
             dist = normal_distr(self.graph, len(self.graph.nodes()))
             sorted_dist = sorted(dist)
 
-            plt.hist(dist, range = (0,1), bins = 50)
+            plt.hist(dist, range = (-1,1), bins = 50)
             plt.show()
             i = 0
             for node in index_list:
@@ -157,16 +163,18 @@ class AlgorithmicBiasModel(DiffusionModel):
             print("set to polarized mode")
 
             dist = polarized_distr(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'])
+            #dist = [(2*x) -1 for x in dist]
             sorted_dist = sorted(dist)
 
+
             sorted_dist_round = np.round(sorted_dist)
-            plt.hist(dist, range = (0,1), bins = 50)
+            plt.hist(dist, range = (-1,1), bins = 50)
             plt.show( )
 
             i = 0
             for node in index_list:
 
-                self.status[node] = sorted_dist_round[i]
+                self.status[node] = sorted_dist[i]
                 #print(self.status[node])
 
                 i += 1
@@ -174,8 +182,8 @@ class AlgorithmicBiasModel(DiffusionModel):
 
         ### Trying to pull out the seeded graph status??
 
-        print(self.initial_status)
-        print(nx.get_node_attributes(self.graph, 'color'))
+        #print(self.initial_status)
+        #print(nx.get_node_attributes(self.graph, 'color'))
 
         ### Initialization numpy representation
 
@@ -298,37 +306,63 @@ class AlgorithmicBiasModel(DiffusionModel):
             if diff < self.params['model']['epsilon']:
 
                 # print("Node selection within epsilon bounds")
+
                 # Adding a little bit of extra noise into the equation
                 if self.params['model']['noise'] > 0:
-                    avg = (actual_status[n1] + actual_status[n2]) / 2.0
+                    change = self.params['model']['mu'] *(actual_status[n2] - actual_status[n1])
 
-                    noise1 = np.random.uniform(low=0, high=avg*self.params['model']['noise'])
-                    noise2 = np.random.uniform(low=0, high=avg*self.params['model']['noise'])
-                    random_multiplier1 = random.randint(0, 1) *2 -1
-                    random_multiplier2 = random.randint(0, 1)*2 - 1
+                    noise1 = np.random.uniform(low=-1*change*self.params['model']['noise'], high=change*self.params['model']['noise'])
+                    noise2 = np.random.uniform(low=-1*change*self.params['model']['noise'], high=change*self.params['model']['noise'])
 
 
-                    actual_status[n1] = avg + noise1*random_multiplier1
-                    actual_status[n2] = avg + noise2 * random_multiplier2
+
+                    actual_status[n1] = actual_status[n1]+ change + noise1
+                    actual_status[n2] = actual_status[n2]+ change + noise2
+
+                    #truncating the outcomes
 
                     if actual_status[n1] > 1:
                         #print("Error out of bounds for n1", actual_status[n1])
-                        actual_status[n1] = avg
+                        actual_status[n1] = 1
+
+                    if actual_status[n1] < -1:
+                        #print("Error out of bounds for n1", actual_status[n1])
+                        actual_status[n1] = -1
+
+                    if actual_status[n2] < -1:
+                        #print("Error out of bounds for n2", actual_status[n2])
+                        actual_status[n2] = -1
 
                     if actual_status[n2] > 1 :
                         #print("Error out of bounds for n2", actual_status[n2])
-                        actual_status[n2] = avg
+                        actual_status[n2] = 1
 
                 if self.params['model']['noise'] == 0:
-                    avg = (actual_status[n1] + actual_status[n2]) / 2.0
+                    change = self.params['model']['mu'] *(actual_status[n2] - actual_status[n1])
                     #add another parameter mu here for convergence
-                    actual_status[n1] = avg
-                    actual_status[n2] = avg
+                    actual_status[n1] = actual_status[n1]+ change
+                    actual_status[n2] = actual_status[n2]+ change
+                    if actual_status[n1] > 1:
+                        #print("Error out of bounds for n1", actual_status[n1])
+                        actual_status[n1] = 1
+
+                    if actual_status[n1] < -1:
+                        #print("Error out of bounds for n1", actual_status[n1])
+                        actual_status[n1] = -1
+
+                    if actual_status[n2] < -1:
+                        #print("Error out of bounds for n2", actual_status[n2])
+                        actual_status[n2] = -1
+
+                    if actual_status[n2] > 1 :
+                        #print("Error out of bounds for n2", actual_status[n2])
+                        actual_status[n2] = 1
+
                 # se la rete è completa aggiorno all'interno del ciclo
                 # self.sts, così lo riprendo sempre aggiornato
                 if len(self.node_data) == 0:
-                    self.sts[n1] = avg
-                    self.sts[n2] = avg
+                    self.sts[n1] = actual_status[n1]
+                    self.sts[n2] = actual_status[n2]
 
         # delta, node_count, status_delta = self.status_delta(actual_status)
         delta = actual_status

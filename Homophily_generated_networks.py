@@ -48,7 +48,7 @@ def homophilic_barabasi_albert_graph(N, m, minority_fraction, similitude, p_clus
        random networks", Science 286, pp 509-512, 1999.
     """
     if m < 1 or N < m:
-        raise ("Network must have m>1 and m<n, m=%d,n=%d" % (m, n))
+        raise ("Network must have m>1 and m<n, m=%d,n=%d" % (m, N))
 
     G = nx.Graph()
 
