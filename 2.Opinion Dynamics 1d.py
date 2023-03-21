@@ -34,11 +34,11 @@ model = AlgorithmicBiasModel(g)
 
 # Model Configuration
 config = mc.Configuration()
-config.add_model_parameter("epsilon", 0.9) #bounded confidence parameter
-config.add_model_parameter("mu", 0.35) #convergence parameter
+config.add_model_parameter("epsilon", 1) #bounded confidence parameter
+config.add_model_parameter("mu", 0.7) #convergence parameter
 config.add_model_parameter("gamma", 0) #bias parameter
 config.add_model_parameter("mode", "polarized") #initial opinion distribution
-config.add_model_parameter("noise", 0.01) # noise parameter that cannot exceed 10%
+config.add_model_parameter("noise", 0.05) # noise parameter that cannot exceed 10%
 config.add_model_parameter("minority_fraction", minority_fraction) # minority fraction in the network
 model.set_initial_status(config)
 

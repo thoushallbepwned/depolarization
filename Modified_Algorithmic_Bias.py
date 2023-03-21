@@ -362,11 +362,6 @@ class AlgorithmicBiasModel(DiffusionModel):
                     actual_status[n2] = pos2 + self.params['model']['mu']*change2
                     #actual_status[n2] = pos2 + self.params['model']['mu']*change
 
-                    # else:
-                    #     actual_status[n1] = actual_status[n1] + change
-                    #     actual_status[n2] = actual_status[n2] + change
-                    #actual_status[n1] = actual_status[n1]+ change
-                    #actual_status[n2] = actual_status[n2]+ change
 
                     if actual_status[n1] > 1:
                         #print("Error out of bounds for n1", actual_status[n1])
