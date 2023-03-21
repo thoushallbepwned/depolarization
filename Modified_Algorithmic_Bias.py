@@ -317,15 +317,16 @@ class AlgorithmicBiasModel(DiffusionModel):
 
                 # Adding a little bit of extra noise into the equation
                 if self.params['model']['noise'] > 0:
-                    change = ((actual_status[n2]+2) - (actual_status[n1]+2))
+                    change1 = ((actual_status[n2]+2) - (actual_status[n1]+2))
+                    change2 = ((actual_status[n1]+2) - (actual_status[n2]+2))
 
 
-                    noise1 = np.random.uniform(low=-1*change*self.params['model']['noise'], high=change*self.params['model']['noise'])
-                    noise2 = np.random.uniform(low=-1*change*self.params['model']['noise'], high=change*self.params['model']['noise'])
+                    noise1 = np.random.uniform(low=-1*change1*self.params['model']['noise'], high=change1*self.params['model']['noise'])
+                    noise2 = np.random.uniform(low=-1*change2*self.params['model']['noise'], high=change2*self.params['model']['noise'])
 
 
-                    actual_status[n1] = actual_status[n1]+ self.params['model']['mu']*change + noise1
-                    actual_status[n2] = actual_status[n2]#- self.params['model']['mu']*change + noise2
+                    actual_status[n1] = actual_status[n1]+ self.params['model']['mu']*change1 + noise1
+                    actual_status[n2] = actual_status[n2]+ self.params['model']['mu']*change2 + noise2
 
                     #Truncating the outcomes
 
@@ -348,7 +349,8 @@ class AlgorithmicBiasModel(DiffusionModel):
                 if self.params['model']['noise'] == 0:
 
                     # Testing some ways to see if the absolute difference is screwing things up
-                    change = (actual_status[n2]+10) - (actual_status[n1]+10)
+                    change1 = (actual_status[n2]+10) - (actual_status[n1]+10)
+                    change2 = (actual_status[n1]+10) - (actual_status[n2]+10)
                     pos1 = actual_status[n1]
                     pos2 = actual_status[n2]
 
@@ -356,8 +358,8 @@ class AlgorithmicBiasModel(DiffusionModel):
                     #THIS EQUATION IS SUPER IMPORTANT
 
                     #if actual_status[n1] > actual_status[n2]:
-                    actual_status[n1] = pos1 + self.params['model']['mu']*change
-                    actual_status[n2] = pos2
+                    actual_status[n1] = pos1 + self.params['model']['mu']*change1
+                    actual_status[n2] = pos2 + self.params['model']['mu']*change2
                     #actual_status[n2] = pos2 + self.params['model']['mu']*change
 
                     # else:
