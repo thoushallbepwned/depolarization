@@ -29,8 +29,8 @@ def seeding_opinions(regime):
     p = 0.70  # probability of rewiring each edge
     minority_fraction = 0.5  # fraction of minority nodes in the network
     similitude = 0.8  # similarity metric
-    d = 3 # number of dimensions
-    gamma = 0.5 # correlation between dimensions
+    d = 4 # number of dimensions
+    gamma = 0 # correlation between dimensions
 
     G = homophilic_barabasi_albert_graph(n, m, minority_fraction, similitude, p)  # generating Graph
 
@@ -49,6 +49,10 @@ def seeding_opinions(regime):
 
 #        plt.hist(s)
 #        plt.show()
+
+    elif regime == "mixed":
+        s = mixed_distr_nd(G,n, minority_fraction, d, gamma)
+
     for i in range(n):
          #print(s[i])
          G.nodes[f'{i}']['status'] = s[i]
@@ -59,7 +63,7 @@ def seeding_opinions(regime):
 
 
 
-def polarized_distr_nd(G, n, minority_fraction, d, gamma = 0):
+def polarized_distr_nd(G, n, minority_fraction, d, gamma):
     lower, upper = -1, 1  # lower and upper bounds
 
     count2 = int(n * minority_fraction)
@@ -91,41 +95,84 @@ def polarized_distr_nd(G, n, minority_fraction, d, gamma = 0):
         s[count1:, :] = s2
     print(s.shape)
     #making 3d scatter plot
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
-    ax.scatter(s[:, 0], s[:, 1], s[:, 2])
-    plt.show()
+    # fig = plt.figure()
+    # ax = fig.add_subplot(111, projection='3d')
+    # ax.scatter(s[:, 0], s[:, 1], s[:, 2])
+    # plt.show()
 
 
     # plt.scatter(s[:, 0], s[:, 1])
     # plt.show()
     return s
 
-
-def normal_distr_nd(G, n, d, gamma):
-    print("are we reaching this?")
+def mixed_distr_nd(G,n, minority_fraction, d, gamma):
     lower, upper = -1, 1  # lower and upper bounds
 
-    mu = np.random.uniform(low=-0.25, high=0.25, size=d)
+    count2 = int(n * minority_fraction)
+    count1 = int(n * (1 - minority_fraction))
 
-    "Will need to add a substantial amount of code to determine the level of covariance in the data"
-    covariance = A = np.random.rand(d, d)
-    cov = (1 / d) * A.T @ A
-    # sigma = np.random.uniform(low=0.1, high=0.25, size = d)  # mean and standard deviation
-    print("This is the mean in nd", mu)
-    print("This is the sigma in nd", cov)
+    s = np.zeros((n, d))
+    correlation_matrix = np.identity(d) * (1 - gamma) + gamma
+    print(correlation_matrix)
+    options = ["a","b"]
+    for i in range(d):
+        choices = random.choices(options, weights = [1,1], k = 1)
+        print("what did we pick?", choices)
 
-    nd_array = np.random.multivariate_normal(mu, cov, n)
-    truncacted_array = np.clip(nd_array, -1, 1)
-    #print(truncacted_array)
-
-    plt.scatter(truncacted_array[:, 0], truncacted_array[:, 1])
+        if choices[0] == "a":
+            print("going polarized")
+            s_1  = polarized_distr_nd(G,n, minority_fraction, 1, gamma)
+            plt.hist(s_1, range = (-1,1), bins = 50)
+            plt.show()
+        else:
+            print("going normal")
+            s_1 =   normal_distr_nd(G,n, 1, gamma)
+            plt.hist(s_1, range = (-1,1), bins = 50)
+            plt.show()
+        s[:,i] = s_1[:,0]
+    print(s.shape)
+    #making 3d scatter plot
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    img = ax.scatter(s[:, 0],s[:, 1],s[:, 2], c= s[:,3], cmap = plt.hot())
+    fig.colorbar(img)
     plt.show()
-    # s = X.rvs(n)
+
+
+    # plt.scatter(s[:, 0], s[:, 1])
+    # plt.show()
+
+    return s
+
+
+
+def normal_distr_nd(G, n, d, gamma):
+
+    lower, upper = -1, 1  # lower and upper bounds
+    mu = np.random.uniform(low=-0.25, high=0.25, size=d)
+    sigma = np.random.uniform(low=0.1, high=0.25, size = d)  # mean and standard deviation
+    s = np.zeros((n, d))
+    correlation_matrix = np.identity(d) * (1 - gamma) + gamma
+    if d > 1:
+        "Will need to add a substantial amount of code to determine the level of covariance in the data"
+        covariance = A = np.random.rand(d, d)
+        cov = (1 / d) * A.T @ A
+        cov = np.outer(sigma * sigma, correlation_matrix)
+        nd_array = np.random.multivariate_normal(mu, cov, n)
+        truncacted_array = np.clip(nd_array, -1, 1)
+
+    if d == 1:
+        sigma = np.random.uniform(low=0.1, high=0.25, size = d)  # mean and standard deviation
+        X = stats.truncnorm(
+            (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
+
+        truncacted_array = X.rvs(n)
+        truncacted_array = np.reshape(truncacted_array, (n, 1))
+
     return (truncacted_array)
 
 
-seeding_opinions("polarized")
+seeding_opinions("mixed")
 #opinion_dict = {v: k for v, k in enumerate(s)}
 #print(opinion_dict)
 #nx.set_node_attributes(G, opinion_dict, name= 'opinion')
