@@ -12,7 +12,7 @@ import scipy.stats as stats
 from Modified_Algorithmic_Bias import *
 from Homophily_generated_networks import *
 from collections import Counter
-#plt.matplotlib.use('Qt5Agg')
+plt.matplotlib.use('Qt5Agg')
 from tqdm import tqdm
 
 

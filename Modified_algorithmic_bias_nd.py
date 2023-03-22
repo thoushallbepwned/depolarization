@@ -15,7 +15,7 @@ __email__ = ["alina.sirbu@unipi.it", "giulio.rossetti@isti.cnr.it", "valentina.p
 #modified by Paul Verhagen
 
 
-class AlgorithmicBiasModel(DiffusionModel):
+class AlgorithmicBiasModel_nd(DiffusionModel):
     """
     Model Parameters to be specified via ModelConfig
     :param epsilon: bounded confidence threshold from the Deffuant model, in [0,1]
@@ -86,7 +86,7 @@ class AlgorithmicBiasModel(DiffusionModel):
         Override behaviour of methods in class DiffusionModel.
         Overwrites initial status using random real values.
         """
-        super(AlgorithmicBiasModel, self).set_initial_status(configuration)
+        super(AlgorithmicBiasModel_nd, self).set_initial_status(configuration)
 
 
 ######## Adding major changes here to the node seeding.
@@ -96,7 +96,7 @@ class AlgorithmicBiasModel(DiffusionModel):
         def Extract(lst):
             return [item[0] for item in lst]
 
-        def polarized_distr(G, n, minority_fraction):
+        def polarized_distr_nd(G, n, minority_fraction):
             lower, upper = -1, 1  # lower and upper bounds
             mu1, sigma1 = np.random.uniform(low=-0.9, high=-0.1), np.random.uniform(low=0.0675,
                                                                                    high=0.175)  # mean and standard deviation # mean and standard deviation
@@ -118,17 +118,29 @@ class AlgorithmicBiasModel(DiffusionModel):
             s = np.append(s1, s2)
             return (s)
 
-        def normal_distr(G, n):
+        def normal_distr_nd(G, n, d, gamma):
+            print("are we reaching this?")
             lower, upper = -1, 1  # lower and upper bounds
-            mu, sigma = np.random.uniform(low=-0.25, high=0.25), np.random.uniform(low=0.1,
-                                                                                   high=0.25)  # mean and standard deviation
 
-            X = stats.truncnorm(
-                (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
+            mu = np.random.uniform(low=-0.25, high=0.25, size = d)
+            plt.hist(mu)
+            plt.show()
+            "Will need to add a substantial amount of code to determine the level of covariance in the data"
+            covariance = A = np.random.rand(d,d)
+            cov = (1/d)*A.T @ A
+            #sigma = np.random.uniform(low=0.1, high=0.25, size = d)  # mean and standard deviation
+            print("This is the mean in nd", mu)
+            print("This is the sigma in nd", cov)
 
-            s = X.rvs(n)
 
-            return (s)
+            nd_array = np.random.multivariate_normal(mu, cov, n)
+            truncacted_array = np.clip(nd_array, -1, 1)
+            print(truncacted_array)
+
+            plt.scatter(truncacted_array[:,0], truncacted_array[:,1])
+            plt.show()
+            #s = X.rvs(n)
+            return (truncated_array)
 
         # set node status
 
@@ -154,7 +166,8 @@ class AlgorithmicBiasModel(DiffusionModel):
 
         if self.params['model']['mode'] == 'normal':
             print("set to normal mode")
-            dist = normal_distr(self.graph, len(self.graph.nodes()))
+            dist = normal_distr_nd(self.graph, len(self.graph.nodes()), d = 2, gamma = 0)
+            print("We have sampled")
             sorted_dist = sorted(dist)
 
             plt.hist(dist, range = (-1,1), bins = 50)
@@ -168,7 +181,7 @@ class AlgorithmicBiasModel(DiffusionModel):
         if self.params['model']['mode'] == 'polarized':
             print("set to polarized mode")
 
-            dist = polarized_distr(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'])
+            dist = polarized_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'])
             #dist = [(2*x) -1 for x in dist]
             sorted_dist = sorted(dist)
 
