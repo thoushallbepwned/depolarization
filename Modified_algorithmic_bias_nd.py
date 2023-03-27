@@ -8,6 +8,7 @@ import tqdm
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 import networkx as nx
+import mpl_toolkits.mplot3d as Axes3D
 
 
 __author__ = ["Alina Sirbu", "Giulio Rossetti", "Valentina Pansanella"]
@@ -96,51 +97,144 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         def Extract(lst):
             return [item[0] for item in lst]
 
-        def polarized_distr_nd(G, n, minority_fraction):
+        def polarized_distr_nd(G, n, minority_fraction, d, gamma):
             lower, upper = -1, 1  # lower and upper bounds
-            mu1, sigma1 = np.random.uniform(low=-0.9, high=-0.1), np.random.uniform(low=0.0675,
-                                                                                   high=0.175)  # mean and standard deviation # mean and standard deviation
-            mu2, sigma2 = np.random.uniform(low=0.1, high=0.9), np.random.uniform(low=0.0675,
-                                                                                 high=0.175)  # mean and standard deviation # mean and standard deviation
 
-            X1 = stats.truncnorm(
-                (lower - mu1) / sigma1, (upper - mu1) / sigma1, loc=mu1, scale=sigma1)
-            X2 = stats.truncnorm(
-                (lower - mu2) / sigma2, (upper - mu2) / sigma2, loc=mu2, scale=sigma2)
+            count2 = int(n * minority_fraction)
+            count1 = int(n * (1 - minority_fraction))
 
-            count2 = int(n*minority_fraction)
-            count1 = int(n*(1-minority_fraction))
-            #print(" Node class 1:", count1, "Node class 2:", count2)
+            s = np.zeros((n, d))
+            correlation_matrix = np.identity(d) * (1 - gamma) + gamma
+            # print(correlation_matrix)
 
-            s1 = X1.rvs(count1)
-            s2 = X2.rvs(count2)
+            if d == 1:
+                mu1, sigma1 = np.random.uniform(low=-0.9, high=-0.1), np.random.uniform(low=0.0675,
+                                                                                        high=0.175)  # mean and standard deviation
+                mu2, sigma2 = np.random.uniform(low=0.1, high=0.9), np.random.uniform(low=0.0675,
+                                                                                      high=0.175)  # mean and standard deviation
 
-            s = np.append(s1, s2)
-            return (s)
+                cov1 = np.outer(sigma1 * sigma1, correlation_matrix)
+                cov1 = np.reshape(cov1, (d, d))
+
+                cov2 = np.outer(sigma2 * sigma2, correlation_matrix)
+                cov2 = np.reshape(cov2, (d, d))
+
+                X1 = np.random.multivariate_normal(mean=[mu1] * d, cov=cov1, size=count1)
+                X2 = np.random.multivariate_normal(mean=[mu2] * d, cov=cov2, size=count2)
+
+                s1 = np.clip(X1, lower, upper)
+                s2 = np.clip(X2, lower, upper)
+
+                s[:count1, :] = s1
+                s[count1:, :] = s2
+
+            if d > 1:
+
+                for i in range(d):
+                    mu1, sigma1 = np.random.uniform(low=-0.9, high=-0.1), np.random.uniform(low=0.0675,
+                                                                                            high=0.175)  # mean and standard deviation
+                    mu2, sigma2 = np.random.uniform(low=0.1, high=0.9), np.random.uniform(low=0.0675,
+                                                                                          high=0.175)  # mean and standard deviation
+
+                    cov1 = np.outer(sigma1 * sigma1, correlation_matrix)
+                    cov1 = np.reshape(cov1, (d, d))
+
+                    cov2 = np.outer(sigma2 * sigma2, correlation_matrix)
+                    cov2 = np.reshape(cov2, (d, d))
+
+                    X1 = np.random.multivariate_normal(mean=[mu1] * d, cov=cov1, size=count1)
+                    X2 = np.random.multivariate_normal(mean=[mu2] * d, cov=cov2, size=count2)
+
+                    s1 = np.clip(X1, lower, upper)
+                    s2 = np.clip(X2, lower, upper)
+
+                    s[:count1, :] = s1
+                    s[count1:, :] = s2
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            img = ax.scatter(s[:, 0], s[:, 1], s[:, 2], c=s[:, 3], cmap=plt.hot())
+            fig.colorbar(img)
+            plt.show()
+
+
+            return s
 
         def normal_distr_nd(G, n, d, gamma):
-            print("are we reaching this?")
+
+            lower, upper = -1, 1  # lower and upper bounds
+            mu = np.random.uniform(low=-0.25, high=0.25, size=d)
+            sigma = np.random.uniform(low=0.1, high=0.25, size=d)  # standard deviation
+            s = np.zeros((n, d))
+            plt.hist(s)
+            plt.show()
+            print("testing the shape of s")
+            correlation_matrix = np.identity(d) * (1 - gamma) + gamma
+            # print(correlation_matrix)
+
+            if d > 1:
+                "Will need to add a substantial amount of code to determine the level of covariance in the data"
+                # covariance = A = np.random.rand(d, d)
+                # print(covariance.shape)
+                # cov = (1 / d) * A.T @ A
+                # print(cov.shape)
+                # cov = np.outer(sigma, correlation_matrix)
+                # print(cov.shape)
+                s = np.random.multivariate_normal(mu, correlation_matrix, n)
+                s = s / np.max(s)
+
+            if d == 1:
+                sigma = np.random.uniform(low=0.1, high=0.25, size=d)  # mean and standard deviation
+                X = stats.truncnorm(
+                    (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
+
+                truncacted_array = X.rvs(n)
+                s = np.reshape(truncacted_array, (n, 1))
+
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            img = ax.scatter(s[:, 0], s[:, 1], s[:, 2], c=s[:, 3], cmap=plt.hot())
+            fig.colorbar(img)
+            plt.show()
+
+
+            return (s)
+
+        def mixed_distr_nd(G, n, minority_fraction, d, gamma):
+            print("Applying the mixed sampling regime, the following choices were made:")
             lower, upper = -1, 1  # lower and upper bounds
 
-            mu = np.random.uniform(low=-0.25, high=0.25, size = d)
-            plt.hist(mu)
+            count2 = int(n * minority_fraction)
+            count1 = int(n * (1 - minority_fraction))
+
+
+            s = np.zeros((n, d))
+            correlation_matrix = np.identity(d) * (1 - gamma) + gamma
+            # print(correlation_matrix)
+            options = ["a", "b"]
+            for i in range(d):
+                choices = random.choices(options, weights=[1, 1], k=1)
+                # print("what did we pick?", choices)
+
+                if choices[0] == "a":
+                    print("going polarized")
+                    s_1 = polarized_distr_nd(G, n, minority_fraction, 1, gamma)
+                    plt.hist(s_1, range=(-1, 1), bins=50)
+                    plt.show()
+                else:
+                    print("going normal")
+                    s_1 = normal_distr_nd(G, n, 1, gamma)
+                    plt.hist(s_1, range=(-1, 1), bins=50)
+                    plt.show()
+                s[:, i] = s_1[:, 0]
+
+            fig = plt.figure()
+            ax = fig.add_subplot(111, projection='3d')
+            img = ax.scatter(s[:, 0], s[:, 1], s[:, 2], c=s[:, 3], cmap=plt.hot())
+            fig.colorbar(img)
             plt.show()
-            "Will need to add a substantial amount of code to determine the level of covariance in the data"
-            covariance = A = np.random.rand(d,d)
-            cov = (1/d)*A.T @ A
-            #sigma = np.random.uniform(low=0.1, high=0.25, size = d)  # mean and standard deviation
-            print("This is the mean in nd", mu)
-            print("This is the sigma in nd", cov)
 
-
-            nd_array = np.random.multivariate_normal(mu, cov, n)
-            truncacted_array = np.clip(nd_array, -1, 1)
-            print(truncacted_array)
-
-            plt.scatter(truncacted_array[:,0], truncacted_array[:,1])
-            plt.show()
-            #s = X.rvs(n)
-            return (truncated_array)
+            return s
 
         # set node status
 
@@ -166,22 +260,20 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         if self.params['model']['mode'] == 'normal':
             print("set to normal mode")
-            dist = normal_distr_nd(self.graph, len(self.graph.nodes()), d = 2, gamma = 0)
-            print("We have sampled")
-            sorted_dist = sorted(dist)
+            s = normal_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['dims'], self.params['model']['gamma'])
 
-            plt.hist(dist, range = (-1,1), bins = 50)
-            plt.show()
-            i = 0
-            for node in index_list:
-                self.status[node] = sorted_dist[i]
-                i += 1
-            self.initial_status = self.status.copy()
+            # sorted_dist = s
+            #
+            # i = 0
+            # for node in index_list:
+            #     self.status[node] = sorted_dist[i]
+            #     i += 1
+            # self.initial_status = self.status.copy()
 
         if self.params['model']['mode'] == 'polarized':
             print("set to polarized mode")
 
-            dist = polarized_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'])
+            dist = polarized_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'],self.params['model']['dims'], self.params['model']['gamma'])
             #dist = [(2*x) -1 for x in dist]
             sorted_dist = sorted(dist)
 

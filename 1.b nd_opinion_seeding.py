@@ -23,14 +23,8 @@ import mpl_toolkits.mplot3d as Axes3D
 
 
 # Input options ("normal", "random", "polarized")
-def seeding_opinions(n, m, p, minority_faction, similitude, d, gamma, regime):
-    n = 1000  # number of nodes Note: This should be an even number to ensure stability
-    m = 6  # number of edges per node
-    p = 0.70  # probability of rewiring each edge
-    minority_fraction = 0.5  # fraction of minority nodes in the network
-    similitude = 0.8  # similarity metric
-    d = 4 # number of dimension.7
-    gamma = 0.5 # correlation between dimensions
+def seeding_opinions(n, m, p, minority_fraction, similitude, d, gamma, regime):
+
 
     G = homophilic_barabasi_albert_graph(n, m, minority_fraction, similitude, p)  # generating Graph
 
@@ -63,7 +57,7 @@ def seeding_opinions(n, m, p, minority_faction, similitude, d, gamma, regime):
 
    # nx.write_gml(G, f"data/graph_structures/opinion_seeded/{text}/{graph}")
 
-    return ()
+    return (s)
 
 
 
@@ -130,7 +124,7 @@ def normal_distr_nd(G, n, d, gamma):
     sigma = np.random.uniform(low=0.1, high=0.25, size = d)  #standard deviation
     s = np.zeros((n, d))
     correlation_matrix = np.identity(d) * (1 - gamma) + gamma
-    print(correlation_matrix)
+    #print(correlation_matrix)
 
     if d > 1:
         "Will need to add a substantial amount of code to determine the level of covariance in the data"
@@ -183,13 +177,16 @@ def mixed_distr_nd(G,n, minority_fraction, d, gamma):
     return s
 
 
+#setting parameters
 
+n = 1000  # number of nodes Note: This should be an even number to ensure stability
+m = 6  # number of edges per node
+p = 0.70  # probability of rewiring each edge
+minority_fraction = 0.5  # fraction of minority nodes in the network
+similitude = 0.8  # similarity metric
+d = 4 # number of dimension.7
+gamma = 0.5 # correlation between dimensions
 
-
-
-#seeding_opinions("mixed")
-#seeding_opinions("polarized")
-seeding_opinions("normal")
-#opinion_dict = {v: k for v, k in enumerate(s)}
-#print(opinion_dict)
-#nx.set_node_attributes(G, opinion_dict, name= 'opinion')
+seeding_opinions(n, m, p, minority_fraction, similitude, d, gamma,"polarized")
+seeding_opinions(n, m, p, minority_fraction, similitude, d, gamma,"mixed")
+seeding_opinions(n, m, p, minority_fraction, similitude, d, gamma,"normal")
