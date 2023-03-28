@@ -165,8 +165,6 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             mu = np.random.uniform(low=-0.25, high=0.25, size=d)
             sigma = np.random.uniform(low=0.1, high=0.25, size=d)  # standard deviation
             s = np.zeros((n, d))
-            plt.hist(s)
-            plt.show()
             print("testing the shape of s")
             correlation_matrix = np.identity(d) * (1 - gamma) + gamma
             # print(correlation_matrix)
@@ -191,11 +189,25 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 s = np.reshape(truncacted_array, (n, 1))
 
 
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            img = ax.scatter(s[:, 0], s[:, 1], s[:, 2], c=s[:, 3], cmap=plt.hot())
-            fig.colorbar(img)
-            plt.show()
+            #visualization block
+
+            if d == 1:
+                plt.hist(s)
+                plt.show()
+            elif d == 2:
+                plt.scatter(s[:, 0], s[:, 1])
+                plt.show()
+
+            else:
+                fig = plt.figure()
+                ax = fig.add_subplot(111, projection='3d')
+
+                if d > 3:
+                    img = ax.scatter(s[:, 0], s[:, 1], s[:, 2], c=s[:, 3], cmap=plt.hot())
+                if d == 3:
+                    img = ax.scatter(s[:, 0], s[:, 1], s[:, 2])
+                fig.colorbar(img)
+                plt.show()
 
 
             return (s)
@@ -261,14 +273,21 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         if self.params['model']['mode'] == 'normal':
             print("set to normal mode")
             s = normal_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['dims'], self.params['model']['gamma'])
+            print("this is the shape of s", s.shape)
 
-            # sorted_dist = s
-            #
-            # i = 0
-            # for node in index_list:
-            #     self.status[node] = sorted_dist[i]
-            #     i += 1
-            # self.initial_status = self.status.copy()
+            sorted_dist = np.sort(s, axis = 0)
+            #print(sorted_dist, sorted_dist.shape)
+            #print( np.mean(s, axis = 0), np.mean((s+2), axis = 0))
+
+            i = 0
+            for node in index_list:
+                entry = sorted_dist[i].flatten()
+                self.status[node] = float(entry)
+                print(type(entry))
+                i += 1
+            print("Wtf is this?", self.status)
+            print("the shape is", self.status.items())
+            self.initial_status = self.status.copy()
 
         if self.params['model']['mode'] == 'polarized':
             print("set to polarized mode")
@@ -289,27 +308,34 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 #print(self.status[node])
 
                 i += 1
+
             self.initial_status = self.status.copy()
 
-        ### Trying to pull out the seeded graph status??
 
-        #print(self.initial_status)
-        #print(nx.get_node_attributes(self.graph, 'color'))
 
         ### Initialization numpy representation
 
         max_edgees = (self.graph.number_of_nodes() * (self.graph.number_of_nodes() - 1)) / 2
+        print("what is this structure", self.status.items())
         nids = np.array(list(self.status.items()))
+        print("what are nids exactly?", nids)
         self.ids = nids[:, 0]
+        print("and what do we need for the ids?", self.ids)
+        # self.ids = np.array(len(self.graph.nodes()))
 
         if max_edgees == self.graph.number_of_edges():
             self.sts = nids[:, 1]
+            print("what is sts?", self.sts)
 
         else:
+            "Found the location where a bunch of things need to change"
+
             for i in self.graph.nodes:
                 i_neigh = list(self.graph.neighbors(i))
                 i_ids = nids[:, 0][i_neigh]
+                print("what are i_ids?", i_ids)
                 i_sts = nids[:, 1][i_neigh]
+                print("what are i_ists?", i_sts)
                 # non uso mai node_data[:,1]
                 # per tenere aggiornato node_data() all'interno del for dovrei ciclare ogni item=nodo
                 # e se uno dei suoi vicini è n1 o n2 aggiornare l'array sts

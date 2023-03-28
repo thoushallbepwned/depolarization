@@ -162,6 +162,7 @@ class AlgorithmicBiasModel(DiffusionModel):
             i = 0
             for node in index_list:
                 self.status[node] = sorted_dist[i]
+                print(type(sorted_dist[i]))
                 i += 1
             self.initial_status = self.status.copy()
 
@@ -186,14 +187,11 @@ class AlgorithmicBiasModel(DiffusionModel):
                 i += 1
             self.initial_status = self.status.copy()
 
-        ### Trying to pull out the seeded graph status??
-
-        #print(self.initial_status)
-        #print(nx.get_node_attributes(self.graph, 'color'))
 
         ### Initialization numpy representation
 
         max_edgees = (self.graph.number_of_nodes() * (self.graph.number_of_nodes() - 1)) / 2
+        print("What is this structure", self.status.items())
         nids = np.array(list(self.status.items()))
         self.ids = nids[:, 0]
 
