@@ -162,54 +162,36 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         def normal_distr_nd(G, n, d, gamma):
 
             lower, upper = -1, 1  # lower and upper bounds
-            mu = np.random.uniform(low=-0.25, high=0.25, size=d)
-            sigma = np.random.uniform(low=0.1, high=0.25, size=d)  # standard deviation
             s = np.zeros((n, d))
-            print("testing the shape of s")
+
             correlation_matrix = np.identity(d) * (1 - gamma) + gamma
-            # print(correlation_matrix)
+            # if gamma < 0:
+            #     correlation_matrix = np.identity(d) * (1 + gamma) - gamma
+            # #print(correlation_matrix)
 
             if d > 1:
-                "Will need to add a substantial amount of code to determine the level of covariance in the data"
-                # covariance = A = np.random.rand(d, d)
-                # print(covariance.shape)
-                # cov = (1 / d) * A.T @ A
-                # print(cov.shape)
-                # cov = np.outer(sigma, correlation_matrix)
-                # print(cov.shape)
-                s = np.random.multivariate_normal(mu, correlation_matrix, n)
-                s = s / np.max(s)
+                mu = np.random.uniform(low=-0.25, high=0.25, size=d)
+                for i in range(d):
+                    sigma = np.random.uniform(low=0.1, high=0.25, size=1)  # standard deviation
+                    "Will need to add a substantial amount of code to determine the level of covariance in the data"
+                    # covariance = A = np.random.rand(d, d)
+                    # print(covariance.shape)
+                    # cov = (1 / d) * A.T @ A
+                    # print(cov.shape)
+                    cov = np.outer(sigma * sigma, correlation_matrix)
+                    cov = np.reshape(cov, (d, d))
+                    print(cov)
+                    s = np.random.multivariate_normal(mu, cov, n)
+                    s = s / np.max(s)
 
             if d == 1:
+                mu = np.random.uniform(low=-0.25, high=0.25, size=d)
                 sigma = np.random.uniform(low=0.1, high=0.25, size=d)  # mean and standard deviation
                 X = stats.truncnorm(
                     (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
 
                 truncacted_array = X.rvs(n)
                 s = np.reshape(truncacted_array, (n, 1))
-
-
-            #visualization block
-
-            if d == 1:
-                plt.hist(s)
-                plt.show()
-            elif d == 2:
-                plt.scatter(s[:, 0], s[:, 1])
-                plt.show()
-
-            else:
-                fig = plt.figure()
-                ax = fig.add_subplot(111, projection='3d')
-
-                if d > 3:
-                    img = ax.scatter(s[:, 0], s[:, 1], s[:, 2], c=s[:, 3], cmap=plt.hot())
-                if d == 3:
-                    img = ax.scatter(s[:, 0], s[:, 1], s[:, 2])
-                fig.colorbar(img)
-                plt.show()
-
-
             return (s)
 
         def mixed_distr_nd(G, n, minority_fraction, d, gamma):
@@ -273,7 +255,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         if self.params['model']['mode'] == 'normal':
             print("set to normal mode")
             s = normal_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['dims'], self.params['model']['gamma'])
-            print("this is the shape of s", s.shape)
+            print("this is the shape of s", s, s.shape)
 
             sorted_dist = np.sort(s, axis = 0)
             #print(sorted_dist, sorted_dist.shape)
@@ -316,16 +298,16 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         ### Initialization numpy representation
 
         max_edgees = (self.graph.number_of_nodes() * (self.graph.number_of_nodes() - 1)) / 2
-        print("what is this structure", self.status.items())
+        #print("what is this structure", self.status.items())
         nids = np.array(list(self.status.items()))
-        print("what are nids exactly?", nids)
+        #print("what are nids exactly?", nids)
         self.ids = nids[:, 0]
-        print("and what do we need for the ids?", self.ids)
+        #print("and what do we need for the ids?", self.ids)
         # self.ids = np.array(len(self.graph.nodes()))
 
         if max_edgees == self.graph.number_of_edges():
             self.sts = nids[:, 1]
-            print("what is sts?", self.sts)
+            #print("what is sts?", self.sts)
 
         else:
             "Found the location where a bunch of things need to change"
@@ -333,9 +315,9 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             for i in self.graph.nodes:
                 i_neigh = list(self.graph.neighbors(i))
                 i_ids = nids[:, 0][i_neigh]
-                print("what are i_ids?", i_ids)
+                #print("what are i_ids?", i_ids)
                 i_sts = nids[:, 1][i_neigh]
-                print("what are i_ists?", i_sts)
+                #print("what are i_ists?", i_sts)
                 # non uso mai node_data[:,1]
                 # per tenere aggiornato node_data() all'interno del for dovrei ciclare ogni item=nodo
                 # e se uno dei suoi vicini è n1 o n2 aggiornare l'array sts
