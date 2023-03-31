@@ -27,7 +27,7 @@ m = 6 # number of edges per node
 p = 0.70 # probability of rewiring each edge
 minority_fraction = 0.5 # fraction of minority nodes in the network
 similitude = 0.8 # similarity metric
-d = 1 # number of dimension
+d = 2 # number of dimension
 gamma = 0.5 # correlation between dimensions
 
 

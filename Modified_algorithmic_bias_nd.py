@@ -255,7 +255,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         if self.params['model']['mode'] == 'normal':
             print("set to normal mode")
             s = normal_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['dims'], self.params['model']['gamma'])
-            print("this is the shape of s", s, s.shape)
+            #print("this is the shape of s", s, s.shape)
 
             sorted_dist = np.sort(s, axis = 0)
             #print(sorted_dist, sorted_dist.shape)
@@ -264,11 +264,15 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             i = 0
             for node in index_list:
                 entry = sorted_dist[i].flatten()
-                self.status[node] = float(entry)
-                print(type(entry))
+                if self.params['model']['dims'] == 1:
+
+                    self.status[node] = float(entry)
+                else:
+                    self.status[node] = entry.tolist()
+                #print(type(entry))
                 i += 1
-            print("Wtf is this?", self.status)
-            print("the shape is", self.status.items())
+            #print("Wtf is this?", self.status)
+            #print("the shape is", self.status.items())
             self.initial_status = self.status.copy()
 
         if self.params['model']['mode'] == 'polarized':
@@ -299,8 +303,9 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         max_edgees = (self.graph.number_of_nodes() * (self.graph.number_of_nodes() - 1)) / 2
         #print("what is this structure", self.status.items())
-        nids = np.array(list(self.status.items()))
-        #print("what are nids exactly?", nids)
+        #print("what is nids?", np.array(list(self.status.items())))
+        nids = list(self.status.items())
+        print("what are nids exactly?", nids)
         self.ids = nids[:, 0]
         #print("and what do we need for the ids?", self.ids)
         # self.ids = np.array(len(self.graph.nodes()))
