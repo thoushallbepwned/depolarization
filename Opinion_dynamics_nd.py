@@ -43,7 +43,7 @@ config.add_model_parameter("epsilon", 1) #bounded confidence parameter
 config.add_model_parameter("mu", 0.7) #convergence parameter
 config.add_model_parameter("gamma", 0) #bias parameter
 config.add_model_parameter("mode", "normal") #initial opinion distribution
-config.add_model_parameter("noise", 0.05) # noise parameter that cannot exceed 10%
+config.add_model_parameter("noise", 0) # noise parameter that cannot exceed 10%
 config.add_model_parameter("minority_fraction", minority_fraction) # minority fraction in the network
 config.add_model_parameter("dims", d) # number of dimensions
 config.add_model_parameter("gamma", gamma) # correlation between dimensions
@@ -57,7 +57,7 @@ def Extract(lst):
 
 
 #Simulation execution
-epochs = 20
+epochs = 2
 iterations = model.iteration_bunch(epochs)
 
 # Iteration extraction
@@ -69,7 +69,7 @@ for nodes in control_graph.nodes:
      control_graph.nodes[nodes]['opinion'] = test_vector[nodes]
 
 #print("assortivity before opinion dynamics for color", nx.attribute_assortativity_coefficient(control_graph, 'color'))
-print("assortivity before opinion dynamics for opinion", nx.numeric_assortativity_coefficient(control_graph, 'opinion'))
+#print("assortivity before opinion dynamics for opinion", nx.numeric_assortativity_coefficient(control_graph, 'opinion'))
 opinion_vector = iterations[epochs-1]['status']
 
 
@@ -82,19 +82,19 @@ int = list(x.values())
 #print("this should be the opinions after x iterations", np.mean(int))
 
 #showing distribution of opinions after opinion dynamics
-plt.hist(int, range = (-1,1), bins = 50)
-plt.show()
+#plt.hist(int, range = (-1,1), bins = 50)
+#plt.show()
 
 
 pos = nx.spring_layout(g, k=5, iterations = 10, scale = 10)
-nx.draw(g, node_color = int, with_labels = False,
-       alpha = 0.6, node_size = 50, vmin = 0, vmax = 1)
+#nx.draw(g, node_color = int, with_labels = False,
+#       alpha = 0.6, node_size = 50, vmin = 0, vmax = 1)
 #nx.draw(g, node_color = int)
 plt.show()
 
 
 # assortativity after opinion dynamics
-print("assortivity after opinion dynamics is:", nx.numeric_assortativity_coefficient(g, 'opinion'))
+#print("assortivity after opinion dynamics is:", nx.numeric_assortativity_coefficient(g, 'opinion'))
 
 viz = OpinionEvolution(model, iterations)
 viz.plot("opinion_ev.pdf")

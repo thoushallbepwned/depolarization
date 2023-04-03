@@ -97,6 +97,12 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         def Extract(lst):
             return [item[0] for item in lst]
 
+        def Match(a, b):
+            return [elem for elem in a if elem in b]
+
+        def filter(array1, z):
+            return [tuple(elem for i, elem in enumerate(tup) if i in z) for tup in array1]
+
         def polarized_distr_nd(G, n, minority_fraction, d, gamma):
             lower, upper = -1, 1  # lower and upper bounds
 
@@ -304,10 +310,17 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         max_edgees = (self.graph.number_of_nodes() * (self.graph.number_of_nodes() - 1)) / 2
         #print("what is this structure", self.status.items())
         #print("what is nids?", np.array(list(self.status.items())))
-        nids = list(self.status.items())
+
+        if self.params['model']['dims'] == 1:
+            nids = np.array(list(self.status.items()))
+            self.ids = nids[:, 0]
+        else:
+            nids = list(self.status.items())
+            self.ids = Extract(nids)
+
         print("what are nids exactly?", nids)
-        self.ids = nids[:, 0]
-        #print("and what do we need for the ids?", self.ids)
+
+        print("and what do we need for the ids?", self.ids)
         # self.ids = np.array(len(self.graph.nodes()))
 
         if max_edgees == self.graph.number_of_edges():
@@ -318,22 +331,27 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             "Found the location where a bunch of things need to change"
 
             for i in self.graph.nodes:
-                i_neigh = list(self.graph.neighbors(i))
-                i_ids = nids[:, 0][i_neigh]
-                #print("what are i_ids?", i_ids)
-                i_sts = nids[:, 1][i_neigh]
-                #print("what are i_ists?", i_sts)
-                # non uso mai node_data[:,1]
-                # per tenere aggiornato node_data() all'interno del for dovrei ciclare ogni item=nodo
-                # e se uno dei suoi vicini è n1 o n2 aggiornare l'array sts
-                # la complessità dovrebbe essere O(N)
-                # se invece uso solo actual_status, considerando che per ogni nodo ho la lista dei neighbors in memoria
-                # a ogni ciclo devo soltanto tirarmi fuori la lista degli stati degli avg_k vicini e prendere i
-                # loro stati da actual_status
-                # quindi la complessità dovrebbe essere O(N*p) < O(N)
-                # sto pensando ad un modo per farlo in O(1) ma non mi è ancora venuto in mente
+                if self.params['model']['dims'] == 1:
+                    i_neigh = list(self.graph.neighbors(i))
+                    i_ids = nids[:, 0][i_neigh]
+                    i_sts = nids[:, 1][i_neigh]
+                    #print("what are i_neigh?", i_neigh)
+                    #print("what are i_ids?", i_ids)
+                    #print(np.array_equal(i_ids, i_neigh))
+                    #print("what are i_ists?", i_sts)
 
-                self.node_data[i] = (i_ids, i_sts)
+                    self.node_data[i] = (i_ids, i_sts)
+                else:
+                    i_neigh = list(self.graph.neighbors(i))
+                    i_ids = i_neigh
+                    #i_ids = [tup[0] for tup in nids if tup[0] in i_neigh]
+                    i_sts = [tup[1] for tup in nids if tup[0] in i_neigh]
+                    #print("what are i_neigh?", i_neigh)
+                    #print("what are i_ids?", i_ids)
+                    #print(np.array_equal(i_ids, i_neigh))
+                    #print("what are i_ists?", i_sts)
+
+                    self.node_data[i] = (i_ids, i_sts)
 
     # def clean_initial_status(self, valid_status=None):
     #     for n, s in future.utils.iteritems(self.status):
@@ -349,6 +367,11 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
     def pb1(self, statuses, i_status):
         dist = np.abs(statuses - i_status)
         null = np.full(statuses.shape[0], 0.00001)
+        "Taking a cheat now by only selecting the first dimension"
+        if self.params['model']['dims'] > 1:
+            dist = dist[:, 0]
+        else:
+            dist = dist
         max_base = np.maximum(dist, null)
         dists = max_base ** -self.params['model']['gamma']
         return dists
@@ -383,7 +406,10 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         #print("getting node attrtibudes", nx.get_node_attributes(self.graph, 'status'))
         #print("assortivity before opinion dynamics", nx.numeric_assortativity_coefficient(self.graph, 'status'))
 
-        # interact with peers
+        "Adding a very large forloop here that will iterate over dimensions"
+
+
+        #interact with peers
         for i in range(0, n):
 
             # Selecting a random node
@@ -407,8 +433,16 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
             # Selecting a random node based on the probability
             #print("currently targeted node is", n1)
-            selection_prob = self.pb1(neigh_sts, actual_status[n1])
 
+            "Putting a lazy fix here: I am flattening the actual_status of [n1] to select the node"
+
+            if self.params['model']['dims'] == 1:
+                selection_prob = self.pb1(neigh_sts, actual_status[n1])
+            else:
+                print("what is the shape of actual_status?",actual_status[n1][0])
+                selection_prob = self.pb1(neigh_sts, actual_status[n1][0])
+            #if selection_prob == 0:
+            print("these are the selection probabilites", selection_prob)
             # compute probabilities to select a second node among the neighbours
             total = np.sum(selection_prob)
             selection_prob = selection_prob / total
@@ -421,98 +455,78 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             # seleziono n2 dagli id dei neighbors di n1
             n2 = int(neigh_ids[n2])
 
-            # update status of n1 and n2
-            diff = np.abs((actual_status[n1]+2) - (actual_status[n2]+2))
 
+
+            "Stuff gets interesting here, because we will need to specify a distance metric here to govern the interaction"
+            print("what is n1?", actual_status[n1])
+            print("what is n2?", actual_status[n2])
+            if self.params['model']['dims'] > 1:
+                diff = [abs((actual_status[n1][i]+2) - (actual_status[n2][i]+2)) for i in range(self.params['model']['dims'])]
+            else:
+                diff = np.abs((actual_status[n1]+2) - (actual_status[n2]+2))
+
+
+            print("what is diff?", diff)
+            diff = np.array(diff)
+
+
+            # update status of n1 and n2
+            #diff = np.abs((np.array(actual_status[n1]+2)) - np.array((actual_status[n2]+2)))
             # Testing whether epsilon is respected
             # if diff > self.params['model']['epsilon']:
             #     print("ERROR: Node selection opinion out of bounds")
 
+            "First model: We are going to iteratate over all admissible dimension"
 
-            if diff < self.params['model']['epsilon']:
+            for i in range(self.params['model']['dims']):
 
-                # print("Node selection within epsilon bounds")
+                print(diff[i])
 
-                # Adding a little bit of extra noise into the equation
-                if self.params['model']['noise'] > 0:
-                    change1 = ((actual_status[n2]+2) - (actual_status[n1]+2))
-                    change2 = ((actual_status[n1]+2) - (actual_status[n2]+2))
-
-
-                    noise1 = np.random.uniform(low=-1*change1*self.params['model']['noise'], high=change1*self.params['model']['noise'])
-                    noise2 = np.random.uniform(low=-1*change2*self.params['model']['noise'], high=change2*self.params['model']['noise'])
+                if float(diff[i]) < self.params['model']['epsilon']:
+                    # Adding a little bit of extra noise into the equation
+                    if self.params['model']['noise'] > 0:
+                        change1 = ((actual_status[n2][i]+2) - (actual_status[n1][i]+2))
+                        change2 = ((actual_status[n1][i]+2) - (actual_status[n2][i]+2))
 
 
-                    actual_status[n1] = actual_status[n1]+ self.params['model']['mu']*change1 + noise1
-                    actual_status[n2] = actual_status[n2]+ self.params['model']['mu']*change2 + noise2
+                        noise1 = np.random.uniform(low=-1*change1*self.params['model']['noise'], high=change1*self.params['model']['noise'])
+                        noise2 = np.random.uniform(low=-1*change2*self.params['model']['noise'], high=change2*self.params['model']['noise'])
 
-                    #Truncating the outcomes
 
-                    "Hashing this out because in principle the model should be bounded already"
+                        actual_status[n1][i] = actual_status[n1][i]+ self.params['model']['mu']*change1 + noise1
+                        actual_status[n2][i] = actual_status[n2][i]+ self.params['model']['mu']*change2 + noise2
 
-                    # if actual_status[n1] > 1:
-                    #     #print("Error out of bounds for n1", actual_status[n1])
-                    #     actual_status[n1] = 1
-                    #
-                    # if actual_status[n1] < -1:
-                    #     #print("Error out of bounds for n1", actual_status[n1])
-                    #     actual_status[n1] = -1
-                    #
-                    # if actual_status[n2] < -1:
-                    #     #print("Error out of bounds for n2", actual_status[n2])
-                    #     actual_status[n2] = -1
-                    #
-                    # if actual_status[n2] > 1 :
-                    #     #print("Error out of bounds for n2", actual_status[n2])
-                    #     actual_status[n2] = 1
+                        #Truncating the outcomes
 
-                if self.params['model']['noise'] == 0:
 
-                    # Testing some ways to see if the absolute difference is screwing things up
-                    change1 = (actual_status[n2]+10) - (actual_status[n1]+10)
-                    change2 = (actual_status[n1]+10) - (actual_status[n2]+10)
-                    pos1 = actual_status[n1]
-                    pos2 = actual_status[n2]
+                    if self.params['model']['noise'] == 0:
 
-        #########################################
-                    #THIS EQUATION IS SUPER IMPORTANT
+                        # Testing some ways to see if the absolute difference is screwing things up
+                        change1 = (actual_status[n2][i]+10) - (actual_status[n1][i]+10)
+                        change2 = (actual_status[n1][i]+10) - (actual_status[n2][i]+10)
+                        pos1 = actual_status[n1][i]
+                        pos2 = actual_status[n2][i]
 
-                    #if actual_status[n1] > actual_status[n2]:
-                    actual_status[n1] = pos1 + self.params['model']['mu']*change1
-                    actual_status[n2] = pos2 + self.params['model']['mu']*change2
-                    #actual_status[n2] = pos2 + self.params['model']['mu']*change
+            #########################################
+                        #THIS EQUATION IS SUPER IMPORTANT
 
-                    "Hashing this out because in principle the model should be bounded already"
+                        #if actual_status[n1] > actual_status[n2]:
+                        actual_status[n1][i] = pos1 + self.params['model']['mu']*change1
+                        actual_status[n2][i] = pos2 + self.params['model']['mu']*change2
 
-                    # if actual_status[n1] > 1:
-                    #     #print("Error out of bounds for n1", actual_status[n1])
-                    #     actual_status[n1] = 1
-                    #
-                    # if actual_status[n1] < -1:
-                    #     #print("Error out of bounds for n1", actual_status[n1])
-                    #     actual_status[n1] = -1
-                    #
-                    # if actual_status[n2] < -1:
-                    #     #print("Error out of bounds for n2", actual_status[n2])
-                    #     actual_status[n2] = -1
-                    #
-                    # if actual_status[n2] > 1 :
-                    #     #print("Error out of bounds for n2", actual_status[n2])
-                    #     actual_status[n2] = 1
 
-                # se la rete è completa aggiorno all'interno del ciclo
-                # self.sts, così lo riprendo sempre aggiornato
-                if len(self.node_data) == 0:
-                    self.sts[n1] = actual_status[n1]
-                    self.sts[n2] = actual_status[n2]
+                    if len(self.node_data) == 0:
+                        self.sts[n1][i] = actual_status[n1][i]
+                        self.sts[n2][i] = actual_status[n2][i]
+                else:
+                    pass
+            # delta, node_count, status_delta = self.status_delta(actual_status)
+            delta = actual_status
+            node_count = {}
+            status_delta = {}
 
-        # delta, node_count, status_delta = self.status_delta(actual_status)
-        delta = actual_status
-        node_count = {}
-        status_delta = {}
-
-        self.status = actual_status
-        self.actual_iteration += 1
+            self.status = actual_status
+            self.actual_iteration += 1
 
         if node_status:
             return {"iteration": self.actual_iteration - 1, "status": delta,
