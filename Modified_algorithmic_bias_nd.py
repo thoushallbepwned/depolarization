@@ -531,7 +531,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         self.actual_iteration += 1
 
         if node_status:
-            print("what is the iteration number", self.actual_iteration)
+            #print("what is the iteration number", self.actual_iteration)
             return {"iteration": self.actual_iteration - 1, "status": delta,
                     "node_count": node_count.copy(), "status_delta": status_delta.copy()}
         else:
