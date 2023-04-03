@@ -57,7 +57,7 @@ def Extract(lst):
 
 
 #Simulation execution
-epochs = 2
+epochs = 5
 iterations = model.iteration_bunch(epochs)
 
 # Iteration extraction
