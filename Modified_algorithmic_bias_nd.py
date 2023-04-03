@@ -510,8 +510,8 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
 
                         if len(self.node_data) == 0:
-                            self.sts[n1] = actual_status[n1]
-                            self.sts[n2] = actual_status[n2]
+                            self.sts[n1][i] = actual_status[n1][i]
+                            self.sts[n2][i] = actual_status[n2][i]
             else:
                 if diff < self.params['model']['epsilon']:
                     # Adding a little bit of extra noise into the equation
