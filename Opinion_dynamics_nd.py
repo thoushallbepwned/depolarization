@@ -12,7 +12,7 @@ from Modified_algorithmic_bias_nd import *
 from Homophily_generated_networks import *
 from collections import Counter
 import matplotlib
-#matplotlib.use('TkAgg')
+matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
@@ -22,16 +22,15 @@ from tqdm import tqdm
 # Network topology
 # parameters governing the graph structure
 
-n = 60 # number of nodes Note: This should be an even number to ensure stability
-m = 6 # number of edges per node
+n = 30 # number of nodes Note: This should be an even number to ensure stability
+m = 2 # number of edges per node
 p = 0.70 # probability of rewiring each edge
 minority_fraction = 0.5 # fraction of minority nodes in the network
 similitude = 0.8 # similarity metric
 d = 2 # number of dimension
 gamma = 0.5 # correlation between dimensions
 
-
-
+# Generating graph
 g = homophilic_barabasi_albert_graph(n, m, minority_fraction, similitude, p) # generating Graph
 
 # Model selection
@@ -40,7 +39,7 @@ model = AlgorithmicBiasModel_nd(g)
 # Model Configuration
 config = mc.Configuration()
 config.add_model_parameter("epsilon", 1) #bounded confidence parameter
-config.add_model_parameter("mu", 0.7) #convergence parameter
+config.add_model_parameter("mu", 1) #convergence parameter
 config.add_model_parameter("gamma", 0) #bias parameter
 config.add_model_parameter("mode", "normal") #initial opinion distribution
 config.add_model_parameter("noise", 0) # noise parameter that cannot exceed 10%
@@ -61,8 +60,12 @@ epochs = 5
 iterations = model.iteration_bunch(epochs)
 
 # Iteration extraction
+
+for i in range(epochs):
+    print(iterations[i])
 test_vector = iterations[1]['status']
 control_graph = g.copy()
+print(test_vector)
 
 # assigning opinions to nodes
 for nodes in control_graph.nodes:
@@ -71,7 +74,7 @@ for nodes in control_graph.nodes:
 #print("assortivity before opinion dynamics for color", nx.attribute_assortativity_coefficient(control_graph, 'color'))
 #print("assortivity before opinion dynamics for opinion", nx.numeric_assortativity_coefficient(control_graph, 'opinion'))
 opinion_vector = iterations[epochs-1]['status']
-
+print(opinion_vector)
 
 for nodes in g.nodes:
      g.nodes[nodes]['opinion'] = opinion_vector[nodes]
@@ -86,11 +89,11 @@ int = list(x.values())
 #plt.show()
 
 
-pos = nx.spring_layout(g, k=5, iterations = 10, scale = 10)
+#pos = nx.spring_layout(g, k=5, iterations = 10, scale = 10)
 #nx.draw(g, node_color = int, with_labels = False,
 #       alpha = 0.6, node_size = 50, vmin = 0, vmax = 1)
 #nx.draw(g, node_color = int)
-plt.show()
+#plt.show()
 
 
 # assortativity after opinion dynamics

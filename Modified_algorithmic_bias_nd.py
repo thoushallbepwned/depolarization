@@ -156,11 +156,11 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                     s[:count1, :] = s1
                     s[count1:, :] = s2
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            img = ax.scatter(s[:, 0], s[:, 1], s[:, 2], c=s[:, 3], cmap=plt.hot())
-            fig.colorbar(img)
-            plt.show()
+            # fig = plt.figure()
+            # ax = fig.add_subplot(111, projection='3d')
+            # img = ax.scatter(s[:, 0], s[:, 1], s[:, 2], c=s[:, 3], cmap=plt.hot())
+            # fig.colorbar(img)
+            # plt.show()
 
 
             return s
@@ -286,7 +286,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
             dist = polarized_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'],self.params['model']['dims'], self.params['model']['gamma'])
             #dist = [(2*x) -1 for x in dist]
-            sorted_dist = sorted(dist)
+            sorted_dist = np.sort(dist, axis = 0)
 
 
             sorted_dist_round = np.round(sorted_dist)
@@ -393,6 +393,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         if self.actual_iteration == 0:
             self.actual_iteration += 1
             delta, node_count, status_delta = self.status_delta(self.status)
+            print(delta, node_count, status_delta)
             if node_status:
                 return {"iteration": 0, "status": actual_status,
                         "node_count": node_count.copy(), "status_delta": status_delta.copy()}
@@ -459,60 +460,56 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             "Stuff gets interesting here, because we will need to specify a distance metric here to govern the interaction"
 
             if self.params['model']['dims'] > 1:
-                diff = [abs((actual_status[n1][i]+2) - (actual_status[n2][i]+2)) for i in range(self.params['model']['dims'])]
+                diff = [abs((actual_status[n1][d]+2) - (actual_status[n2][d]+2)) for d in range(self.params['model']['dims'])]
             else:
                 diff = np.abs((actual_status[n1]+2) - (actual_status[n2]+2))
 
             diff = np.array(diff)
 
+            "First model: We are going to iterate over all admissible dimension"
 
-            # update status of n1 and n2
-            #diff = np.abs((np.array(actual_status[n1]+2)) - np.array((actual_status[n2]+2)))
-            # Testing whether epsilon is respected
-            # if diff > self.params['model']['epsilon']:
-            #     print("ERROR: Node selection opinion out of bounds")
-
-            "First model: We are going to iteratate over all admissible dimension"
             if self.params['model']['dims'] > 1:
-                for i in range(self.params['model']['dims']):
+                #print("This means that we are working in multidimensional space")
+                for dim in range(self.params['model']['dims']):
 
-                    if float(diff[i]) < self.params['model']['epsilon']:
+                    if float(diff[dim]) < self.params['model']['epsilon']:
+
                         # Adding a little bit of extra noise into the equation
                         if self.params['model']['noise'] > 0:
-                            change1 = ((actual_status[n2][i]+2) - (actual_status[n1][i]+2))
-                            change2 = ((actual_status[n1][i]+2) - (actual_status[n2][i]+2))
+
+
+                            change1 = ((actual_status[n2][dim]+2) - (actual_status[n1][dim]+2))
+                            change2 = ((actual_status[n1][dim]+2) - (actual_status[n2][dim]+2))
 
 
                             noise1 = np.random.uniform(low=-1*change1*self.params['model']['noise'], high=change1*self.params['model']['noise'])
                             noise2 = np.random.uniform(low=-1*change2*self.params['model']['noise'], high=change2*self.params['model']['noise'])
 
 
-                            actual_status[n1][i] = actual_status[n1][i]+ self.params['model']['mu']*change1 + noise1
-                            actual_status[n2][i] = actual_status[n2][i]+ self.params['model']['mu']*change2 + noise2
-
-
-
+                            actual_status[n1][dim] = actual_status[n1][dim]+ self.params['model']['mu']*change1 + noise1
+                            actual_status[n2][dim] = actual_status[n2][dim]+ self.params['model']['mu']*change2 + noise2
 
                         if self.params['model']['noise'] == 0:
 
                             # Testing some ways to see if the absolute difference is screwing things up
-                            change1 = (actual_status[n2][i]+10) - (actual_status[n1][i]+10)
-                            change2 = (actual_status[n1][i]+10) - (actual_status[n2][i]+10)
-                            pos1 = actual_status[n1][i]
-                            pos2 = actual_status[n2][i]
+                            change1 = (actual_status[n2][dim]+10) - (actual_status[n1][dim]+10)
+                            change2 = (actual_status[n1][dim]+10) - (actual_status[n2][dim]+10)
+                            pos1 = actual_status[n1][dim]
+                            pos2 = actual_status[n2][dim]
 
                 #########################################
                             #THIS EQUATION IS SUPER IMPORTANT
 
                             #if actual_status[n1] > actual_status[n2]:
-                            actual_status[n1][i] = pos1 + self.params['model']['mu']*change1
-                            actual_status[n2][i] = pos2 + self.params['model']['mu']*change2
+                            actual_status[n1][dim] = pos1 + self.params['model']['mu']*change1
+                            actual_status[n2][dim] = pos2 + self.params['model']['mu']*change2
 
 
                         if len(self.node_data) == 0:
-                            self.sts[n1][i] = actual_status[n1][i]
-                            self.sts[n2][i] = actual_status[n2][i]
+                            self.sts[n1] = actual_status[n1]
+                            self.sts[n2] = actual_status[n2]
             else:
+                #print("This mean we are working in unidimensional space")
                 if diff < self.params['model']['epsilon']:
                     # Adding a little bit of extra noise into the equation
                     if self.params['model']['noise'] > 0:
@@ -544,15 +541,18 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     if len(self.node_data) == 0:
                         self.sts[n1] = actual_status[n1]
                         self.sts[n2] = actual_status[n2]
-        delta, node_count, status_delta = self.status_delta(actual_status)
+            #delta, node_count, status_delta = self.status_delta(actual_status)
         delta = actual_status
         node_count = {}
         status_delta = {}
+
+        #print("node status", actual_status)
 
         self.status = actual_status
         self.actual_iteration += 1
 
         if node_status:
+            print("This is delta", delta)
             return {"iteration": self.actual_iteration - 1, "status": delta,
                     "node_count": node_count.copy(), "status_delta": status_delta.copy()}
         else:

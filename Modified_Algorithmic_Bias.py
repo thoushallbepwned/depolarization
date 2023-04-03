@@ -362,26 +362,7 @@ class AlgorithmicBiasModel(DiffusionModel):
                     actual_status[n2] = pos2 + self.params['model']['mu']*change2
                     #actual_status[n2] = pos2 + self.params['model']['mu']*change
 
-                    "Hashing this out because in principle the model should be bounded already"
 
-                    # if actual_status[n1] > 1:
-                    #     #print("Error out of bounds for n1", actual_status[n1])
-                    #     actual_status[n1] = 1
-                    #
-                    # if actual_status[n1] < -1:
-                    #     #print("Error out of bounds for n1", actual_status[n1])
-                    #     actual_status[n1] = -1
-                    #
-                    # if actual_status[n2] < -1:
-                    #     #print("Error out of bounds for n2", actual_status[n2])
-                    #     actual_status[n2] = -1
-                    #
-                    # if actual_status[n2] > 1 :
-                    #     #print("Error out of bounds for n2", actual_status[n2])
-                    #     actual_status[n2] = 1
-
-                # se la rete è completa aggiorno all'interno del ciclo
-                # self.sts, così lo riprendo sempre aggiornato
                 if len(self.node_data) == 0:
                     self.sts[n1] = actual_status[n1]
                     self.sts[n2] = actual_status[n2]
