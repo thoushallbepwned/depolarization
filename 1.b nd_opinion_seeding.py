@@ -119,8 +119,8 @@ def polarized_distr_nd(G, n, minority_fraction, d, gamma):
 
     return s
 
-def normal_distr_nd(G, n, d, gamma):
 
+def normal_distr_nd(G, n, d, gamma):
     lower, upper = -1, 1  # lower and upper bounds
     s = np.zeros((n, d))
 
@@ -132,21 +132,21 @@ def normal_distr_nd(G, n, d, gamma):
     if d > 1:
         mu = np.random.uniform(low=-0.25, high=0.25, size=d)
         for i in range(d):
-
             sigma = np.random.uniform(low=0.1, high=0.25, size=1)  # standard deviation
             "Will need to add a substantial amount of code to determine the level of covariance in the data"
-            #covariance = A = np.random.rand(d, d)
-            #print(covariance.shape)
-            #cov = (1 / d) * A.T @ A
-            #print(cov.shape)
+            # covariance = A = np.random.rand(d, d)
+            # print(covariance.shape)
+            # cov = (1 / d) * A.T @ A
+            # print(cov.shape)
             cov = np.outer(sigma * sigma, correlation_matrix)
             cov = np.reshape(cov, (d, d))
             print(cov)
             s = np.random.multivariate_normal(mu, cov, n)
-            s = s/np.max(s)
+            s = s / np.max(s)
 
     if d == 1:
-        sigma = np.random.uniform(low=0.1, high=0.25, size = d)  # mean and standard deviation
+        mu = np.random.uniform(low=-0.25, high=0.25, size=d)
+        sigma = np.random.uniform(low=0.1, high=0.25, size=d)  # mean and standard deviation
         X = stats.truncnorm(
             (lower - mu) / sigma, (upper - mu) / sigma, loc=mu, scale=sigma)
 
@@ -196,5 +196,5 @@ d = 4 # number of dimension.7
 gamma = 0.1 # correlation between dimensions
 
 #seeding_opinions(n, m, p, minority_fraction, similitude, d, gamma,"polarized")
-#seeding_opinions(n, m, p, minority_fraction, similitude, d, gamma,"mixed")
-seeding_opinions(n, m, p, minority_fraction, similitude, d, gamma,"normal")
+seeding_opinions(n, m, p, minority_fraction, similitude, d, gamma,"mixed")
+#seeding_opinions(n, m, p, minority_fraction, similitude, d, gamma,"normal")
