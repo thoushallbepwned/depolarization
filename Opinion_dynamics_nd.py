@@ -60,12 +60,12 @@ epochs = 5
 iterations = model.iteration_bunch(epochs)
 
 # Iteration extraction
+for x in range(epochs):
+    print(iterations[x])
 
-for i in range(epochs):
-    print(iterations[i])
 test_vector = iterations[1]['status']
 control_graph = g.copy()
-print(test_vector)
+print("Initial distribution", test_vector)
 
 # assigning opinions to nodes
 for nodes in control_graph.nodes:
@@ -74,7 +74,7 @@ for nodes in control_graph.nodes:
 #print("assortivity before opinion dynamics for color", nx.attribute_assortativity_coefficient(control_graph, 'color'))
 #print("assortivity before opinion dynamics for opinion", nx.numeric_assortativity_coefficient(control_graph, 'opinion'))
 opinion_vector = iterations[epochs-1]['status']
-print(opinion_vector)
+print("Final distribution", opinion_vector)
 
 for nodes in g.nodes:
      g.nodes[nodes]['opinion'] = opinion_vector[nodes]
@@ -84,35 +84,8 @@ x =nx.get_node_attributes(g, 'opinion')
 int = list(x.values())
 #print("this should be the opinions after x iterations", np.mean(int))
 
-#showing distribution of opinions after opinion dynamics
-#plt.hist(int, range = (-1,1), bins = 50)
-#plt.show()
 
 
-#pos = nx.spring_layout(g, k=5, iterations = 10, scale = 10)
-#nx.draw(g, node_color = int, with_labels = False,
-#       alpha = 0.6, node_size = 50, vmin = 0, vmax = 1)
-#nx.draw(g, node_color = int)
-#plt.show()
-
-
-# assortativity after opinion dynamics
-#print("assortivity after opinion dynamics is:", nx.numeric_assortativity_coefficient(g, 'opinion'))
 
 viz = OpinionEvolution(model, iterations)
 viz.plot("opinion_ev.pdf")
-
-
-# Graveyard
-
-# color_list = nx.get_node_attributes(control_graph, 'color')
-# print(Counter(color_list.values()))
-
-
-# checking if the color and opinion vectors are the allocated properly
-
-# for i in range(len(color_list)):
-#     if color_list[i] == 'red' and test_vector[i] == 0:
-#         print("error red", i, color_list[i], test_vector[i])
-#     if color_list[i] == 'blue' and test_vector[i] == 1:
-#         print("error blue", i, color_list[i], test_vector[i])

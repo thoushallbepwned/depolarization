@@ -227,13 +227,6 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     plt.hist(s_1, range=(-1, 1), bins=50)
                     plt.show()
                 s[:, i] = s_1[:, 0]
-
-            fig = plt.figure()
-            ax = fig.add_subplot(111, projection='3d')
-            img = ax.scatter(s[:, 0], s[:, 1], s[:, 2], c=s[:, 3], cmap=plt.hot())
-            fig.colorbar(img)
-            plt.show()
-
             return s
 
         # set node status
@@ -335,22 +328,12 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     i_neigh = list(self.graph.neighbors(i))
                     i_ids = nids[:, 0][i_neigh]
                     i_sts = nids[:, 1][i_neigh]
-                    #print("what are i_neigh?", i_neigh)
-                    #print("what are i_ids?", i_ids)
-                    #print(np.array_equal(i_ids, i_neigh))
-                    #print("what are i_ists?", i_sts)
-
                     self.node_data[i] = (i_ids, i_sts)
                 else:
                     i_neigh = list(self.graph.neighbors(i))
                     i_ids = i_neigh
                     #i_ids = [tup[0] for tup in nids if tup[0] in i_neigh]
                     i_sts = [tup[1] for tup in nids if tup[0] in i_neigh]
-                    #print("what are i_neigh?", i_neigh)
-                    #print("what are i_ids?", i_ids)
-                    #print(np.array_equal(i_ids, i_neigh))
-                    #print("what are i_ists?", i_sts)
-
                     self.node_data[i] = (i_ids, i_sts)
 
     # def clean_initial_status(self, valid_status=None):
@@ -395,6 +378,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             delta, node_count, status_delta = self.status_delta(self.status)
             print(delta, node_count, status_delta)
             if node_status:
+                print("what is the status here?", actual_status)
                 return {"iteration": 0, "status": actual_status,
                         "node_count": node_count.copy(), "status_delta": status_delta.copy()}
             else:
@@ -403,11 +387,6 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         n = self.graph.number_of_nodes()
 
-        #testing the assortivity:
-        #print("getting node attrtibudes", nx.get_node_attributes(self.graph, 'status'))
-        #print("assortivity before opinion dynamics", nx.numeric_assortativity_coefficient(self.graph, 'status'))
-
-        "Adding a very large forloop here that will iterate over dimensions"
 
 
         #interact with peers
@@ -441,9 +420,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 selection_prob = self.pb1(neigh_sts, actual_status[n1])
             else:
                 selection_prob = self.pb1(neigh_sts, actual_status[n1][0])
-            #if selection_prob == 0:
 
-            # compute probabilities to select a second node among the neighbours
             total = np.sum(selection_prob)
             selection_prob = selection_prob / total
             cumulative_selection_probability = np.cumsum(selection_prob)
@@ -458,7 +435,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
 
             "Stuff gets interesting here, because we will need to specify a distance metric here to govern the interaction"
-
+            "Adding forloop here that will iterate over dimensions"
             if self.params['model']['dims'] > 1:
                 diff = [abs((actual_status[n1][d]+2) - (actual_status[n2][d]+2)) for d in range(self.params['model']['dims'])]
             else:
@@ -506,8 +483,8 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
 
                         if len(self.node_data) == 0:
-                            self.sts[n1] = actual_status[n1]
-                            self.sts[n2] = actual_status[n2]
+                            self.sts[n1][dim] = actual_status[n1][dim]
+                            self.sts[n2][dim] = actual_status[n2][dim]
             else:
                 #print("This mean we are working in unidimensional space")
                 if diff < self.params['model']['epsilon']:
@@ -542,6 +519,8 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                         self.sts[n1] = actual_status[n1]
                         self.sts[n2] = actual_status[n2]
             #delta, node_count, status_delta = self.status_delta(actual_status)
+
+        print("This is the actual status", actual_status)
         delta = actual_status
         node_count = {}
         status_delta = {}
@@ -552,15 +531,16 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         self.actual_iteration += 1
 
         if node_status:
-            print("This is delta", delta)
+            print("what is the iteration number", self.actual_iteration)
             return {"iteration": self.actual_iteration - 1, "status": delta,
                     "node_count": node_count.copy(), "status_delta": status_delta.copy()}
         else:
+            print("Are we getting stuck here?")
             return {"iteration": self.actual_iteration - 1, "status": {},
                     "node_count": node_count.copy(), "status_delta": status_delta.copy()}
 
     def steady_state(self, max_iterations=100000, nsteady=1000, sensibility=0.00001, node_status=True,
-                     progress_bar=False):
+                     progress_bar=True):
         """
         Execute a bunch of model iterations
         :param max_iterations: the maximum number of iterations to execute
