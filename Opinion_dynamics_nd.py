@@ -12,7 +12,7 @@ from Modified_algorithmic_bias_nd import *
 from Homophily_generated_networks import *
 from collections import Counter
 import matplotlib
-matplotlib.use('TkAgg')
+#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
