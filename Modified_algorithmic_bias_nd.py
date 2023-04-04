@@ -378,7 +378,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             delta, node_count, status_delta = self.status_delta(self.status)
             print(delta, node_count, status_delta)
             if node_status:
-                print("what is the status here?", actual_status)
+                #print("what is the status here?", actual_status)
                 return {"iteration": 0, "status": actual_status,
                         "node_count": node_count.copy(), "status_delta": status_delta.copy()}
             else:
@@ -520,7 +520,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                         self.sts[n2] = actual_status[n2]
             #delta, node_count, status_delta = self.status_delta(actual_status)
 
-        print("This is the actual status", actual_status)
+        #print("This is the actual status", actual_status)
         delta = actual_status
         node_count = {}
         status_delta = {}
@@ -539,33 +539,33 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             return {"iteration": self.actual_iteration - 1, "status": {},
                     "node_count": node_count.copy(), "status_delta": status_delta.copy()}
 
-    def steady_state(self, max_iterations=100000, nsteady=1000, sensibility=0.00001, node_status=True,
-                     progress_bar=True):
-        """
-        Execute a bunch of model iterations
-        :param max_iterations: the maximum number of iterations to execute
-        :param nsteady: number of required stable states
-        :param sensibility: sensibility check for a steady state
-        :param node_status: if the incremental node status has to be returned.
-        :param progress_bar: whether to display a progress bar, default False
-        :return: a list containing for each iteration a dictionary {"iteration": iteration_id, "status": dictionary_node_to_status}
-        """
-        system_status = []
-        steady_it = 0
-        for it in tqdm.tqdm(range(0, max_iterations), disable=not progress_bar):
-            its = self.iteration(node_status)
-
-            if it > 0:
-                old = np.array(list(system_status[-1]['status'].values()))
-                actual = np.array(list(its['status'].values()))
-                res = np.abs(old - actual)
-                if np.all((res < sensibility)):
-                    steady_it += 1
-                else:
-                    steady_it = 0
-
-            system_status.append(its)
-            if steady_it == nsteady:
-                return system_status[:-nsteady]
+    # def steady_state(self, max_iterations=100000, nsteady=1000, sensibility=0.00001, node_status=True,
+    #                  progress_bar=True):
+    #     """
+    #     Execute a bunch of model iterations
+    #     :param max_iterations: the maximum number of iterations to execute
+    #     :param nsteady: number of required stable states
+    #     :param sensibility: sensibility check for a steady state
+    #     :param node_status: if the incremental node status has to be returned.
+    #     :param progress_bar: whether to display a progress bar, default False
+    #     :return: a list containing for each iteration a dictionary {"iteration": iteration_id, "status": dictionary_node_to_status}
+    #     """
+    #     system_status = []
+    #     steady_it = 0
+    #     for it in tqdm.tqdm(range(0, max_iterations), disable=not progress_bar):
+    #         its = self.iteration(node_status)
+    #
+    #         if it > 0:
+    #             old = np.array(list(system_status[-1]['status'].values()))
+    #             actual = np.array(list(its['status'].values()))
+    #             res = np.abs(old - actual)
+    #             if np.all((res < sensibility)):
+    #                 steady_it += 1
+    #             else:
+    #                 steady_it = 0
+    #
+    #         system_status.append(its)
+    #         if steady_it == nsteady:
+    #             return system_status[:-nsteady]
 
         return system_status

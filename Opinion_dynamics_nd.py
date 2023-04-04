@@ -27,7 +27,7 @@ m = 2 # number of edges per node
 p = 0.70 # probability of rewiring each edge
 minority_fraction = 0.5 # fraction of minority nodes in the network
 similitude = 0.8 # similarity metric
-d = 2 # number of dimension
+d = 1 # number of dimension
 gamma = 0.5 # correlation between dimensions
 
 # Generating graph
@@ -57,13 +57,14 @@ def Extract(lst):
 
 #Simulation execution
 epochs = 5
-iterations = model.iteration_bunch(epochs)
+iterations = model.iteration_bunch(epochs, node_status = True, progress_bar = True)
 
 # Iteration extraction
 for x in range(epochs):
     print(iterations[x])
 
-test_vector = iterations[1]['status']
+
+test_vector = iterations[0]['status']
 control_graph = g.copy()
 print("Initial distribution", test_vector)
 
