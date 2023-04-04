@@ -8,6 +8,7 @@ import tqdm
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 import networkx as nx
+import copy
 import mpl_toolkits.mplot3d as Axes3D
 
 
@@ -71,6 +72,11 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     "range": [0, 100],
                     "optional": False
                 },
+                "gamma_cov": {
+                    "descr": "Correlation between dimensions",
+                    "range": [0, 1],
+                    "optional": False
+                },
             },
             "nodes": {},
             "edges": {}
@@ -103,14 +109,14 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         def filter(array1, z):
             return [tuple(elem for i, elem in enumerate(tup) if i in z) for tup in array1]
 
-        def polarized_distr_nd(G, n, minority_fraction, d, gamma):
+        def polarized_distr_nd(G, n, minority_fraction, d, gamma_cov):
             lower, upper = -1, 1  # lower and upper bounds
 
             count2 = int(n * minority_fraction)
             count1 = int(n * (1 - minority_fraction))
 
             s = np.zeros((n, d))
-            correlation_matrix = np.identity(d) * (1 - gamma) + gamma
+            correlation_matrix = np.identity(d) * (1 - gamma_cov) + gamma_cov
             # print(correlation_matrix)
 
             if d == 1:
@@ -165,12 +171,12 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
             return s
 
-        def normal_distr_nd(G, n, d, gamma):
+        def normal_distr_nd(G, n, d, gamma_cov):
 
             lower, upper = -1, 1  # lower and upper bounds
             s = np.zeros((n, d))
 
-            correlation_matrix = np.identity(d) * (1 - gamma) + gamma
+            correlation_matrix = np.identity(d) * (1 - gamma_cov) + gamma_cov
             # if gamma < 0:
             #     correlation_matrix = np.identity(d) * (1 + gamma) - gamma
             # #print(correlation_matrix)
@@ -200,7 +206,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 s = np.reshape(truncacted_array, (n, 1))
             return (s)
 
-        def mixed_distr_nd(G, n, minority_fraction, d, gamma):
+        def mixed_distr_nd(G, n, minority_fraction, d, gamma_cov):
             print("Applying the mixed sampling regime, the following choices were made:")
             lower, upper = -1, 1  # lower and upper bounds
 
@@ -209,7 +215,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
 
             s = np.zeros((n, d))
-            correlation_matrix = np.identity(d) * (1 - gamma) + gamma
+            correlation_matrix = np.identity(d) * (1 - gamma_cov) + gamma_cov
             # print(correlation_matrix)
             options = ["a", "b"]
             for i in range(d):
@@ -218,12 +224,12 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                 if choices[0] == "a":
                     print("going polarized")
-                    s_1 = polarized_distr_nd(G, n, minority_fraction, 1, gamma)
+                    s_1 = polarized_distr_nd(G, n, minority_fraction, 1, gamma_cov)
                     plt.hist(s_1, range=(-1, 1), bins=50)
                     plt.show()
                 else:
                     print("going normal")
-                    s_1 = normal_distr_nd(G, n, 1, gamma)
+                    s_1 = normal_distr_nd(G, n, 1, gamma_cov)
                     plt.hist(s_1, range=(-1, 1), bins=50)
                     plt.show()
                 s[:, i] = s_1[:, 0]
@@ -253,7 +259,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         if self.params['model']['mode'] == 'normal':
             print("set to normal mode")
-            s = normal_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['dims'], self.params['model']['gamma'])
+            s = normal_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['dims'], self.params['model']['gamma_cov'])
             #print("this is the shape of s", s, s.shape)
 
             sorted_dist = np.sort(s, axis = 0)
@@ -277,7 +283,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         if self.params['model']['mode'] == 'polarized':
             print("set to polarized mode")
 
-            dist = polarized_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'],self.params['model']['dims'], self.params['model']['gamma'])
+            dist = polarized_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'],self.params['model']['dims'], self.params['model']['gamma_cov'])
             #dist = [(2*x) -1 for x in dist]
             sorted_dist = np.sort(dist, axis = 0)
 
@@ -371,7 +377,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         # their previous statuses
 
 
-        actual_status = self.status.copy()
+        actual_status = copy.deepcopy(self.status)
 
         if self.actual_iteration == 0:
             self.actual_iteration += 1

@@ -22,13 +22,13 @@ from tqdm import tqdm
 # Network topology
 # parameters governing the graph structure
 
-n = 30 # number of nodes Note: This should be an even number to ensure stability
-m = 2 # number of edges per node
+n = 1000 # number of nodes Note: This should be an even number to ensure stability
+m = 8 # number of edges per node
 p = 0.70 # probability of rewiring each edge
 minority_fraction = 0.5 # fraction of minority nodes in the network
 similitude = 0.8 # similarity metric
-d = 1 # number of dimension
-gamma = 0.5 # correlation between dimensions
+d = 4 # number of dimension
+#gamma = 0.5 # correlation between dimensions
 
 # Generating graph
 g = homophilic_barabasi_albert_graph(n, m, minority_fraction, similitude, p) # generating Graph
@@ -39,13 +39,13 @@ model = AlgorithmicBiasModel_nd(g)
 # Model Configuration
 config = mc.Configuration()
 config.add_model_parameter("epsilon", 1) #bounded confidence parameter
-config.add_model_parameter("mu", 1) #convergence parameter
+config.add_model_parameter("mu", 0.5) #convergence parameter
 config.add_model_parameter("gamma", 0) #bias parameter
 config.add_model_parameter("mode", "normal") #initial opinion distribution
 config.add_model_parameter("noise", 0) # noise parameter that cannot exceed 10%
 config.add_model_parameter("minority_fraction", minority_fraction) # minority fraction in the network
 config.add_model_parameter("dims", d) # number of dimensions
-config.add_model_parameter("gamma", gamma) # correlation between dimensions
+config.add_model_parameter("gamma_cov", 0.7) # correlation between dimensions
 model.set_initial_status(config)
 
 
@@ -60,8 +60,8 @@ epochs = 5
 iterations = model.iteration_bunch(epochs, node_status = True, progress_bar = True)
 
 # Iteration extraction
-for x in range(epochs):
-    print(iterations[x])
+#for x in range(epochs):
+#   print(iterations[x])
 
 
 test_vector = iterations[0]['status']
