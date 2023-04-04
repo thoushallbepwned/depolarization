@@ -59,11 +59,6 @@ def Extract(lst):
 epochs = 5
 iterations = model.iteration_bunch(epochs, node_status = True, progress_bar = True)
 
-# Iteration extraction
-#for x in range(epochs):
-#   print(iterations[x])
-
-
 test_vector = iterations[0]['status']
 control_graph = g.copy()
 print("Initial distribution", test_vector)
@@ -72,8 +67,8 @@ print("Initial distribution", test_vector)
 for nodes in control_graph.nodes:
      control_graph.nodes[nodes]['opinion'] = test_vector[nodes]
 
-#print("assortivity before opinion dynamics for color", nx.attribute_assortativity_coefficient(control_graph, 'color'))
-#print("assortivity before opinion dynamics for opinion", nx.numeric_assortativity_coefficient(control_graph, 'opinion'))
+print("assortivity before opinion dynamics for color", nx.attribute_assortativity_coefficient(control_graph, 'color'))
+print("assortivity before opinion dynamics for opinion", nx.numeric_assortativity_coefficient(control_graph, 'opinion'))
 opinion_vector = iterations[epochs-1]['status']
 print("Final distribution", opinion_vector)
 
