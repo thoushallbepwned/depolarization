@@ -22,12 +22,12 @@ from tqdm import tqdm
 # Network topology
 # parameters governing the graph structure
 
-n = 30 # number of nodes Note: This should be an even number to ensure stability
-m = 2 # number of edges per node
+n = 1000 # number of nodes Note: This should be an even number to ensure stability
+m = 6 # number of edges per node
 p = 0.70 # probability of rewiring each edge
 minority_fraction = 0.5 # fraction of minority nodes in the network
 similitude = 0.8 # similarity metric
-d = 1 # number of dimension
+d = 2 # number of dimension
 gamma = 0.5 # correlation between dimensions
 
 # Generating graph
@@ -62,6 +62,8 @@ iterations = model.iteration_bunch(epochs, node_status = True, progress_bar = Tr
 # Iteration extraction
 for x in range(epochs):
     print(iterations[x])
+    #print(id(iterations[x]))
+    #print(id(iterations[x]['status'][0]))
 
 
 test_vector = iterations[0]['status']

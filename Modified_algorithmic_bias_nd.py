@@ -8,6 +8,7 @@ import tqdm
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 import networkx as nx
+import copy
 import mpl_toolkits.mplot3d as Axes3D
 
 
@@ -370,8 +371,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         # - if the two agents have a distance smaller than epsilon, then they change their status to the average of
         # their previous statuses
 
-
-        actual_status = self.status.copy()
+        actual_status = copy.deepcopy(self.status)
 
         if self.actual_iteration == 0:
             self.actual_iteration += 1
@@ -379,7 +379,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             print(delta, node_count, status_delta)
             if node_status:
                 #print("what is the status here?", actual_status)
-                return {"iteration": 0, "status": actual_status,
+                return {"iteration": 0, "status": actual_status.copy(),
                         "node_count": node_count.copy(), "status_delta": status_delta.copy()}
             else:
                 return {"iteration": 0, "status": {},
@@ -435,6 +435,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
 
             "Stuff gets interesting here, because we will need to specify a distance metric here to govern the interaction"
+
             "Adding forloop here that will iterate over dimensions"
             if self.params['model']['dims'] > 1:
                 diff = [abs((actual_status[n1][d]+2) - (actual_status[n2][d]+2)) for d in range(self.params['model']['dims'])]
@@ -478,13 +479,14 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                             #THIS EQUATION IS SUPER IMPORTANT
 
                             #if actual_status[n1] > actual_status[n2]:
-                            actual_status[n1][dim] = pos1 + self.params['model']['mu']*change1
-                            actual_status[n2][dim] = pos2 + self.params['model']['mu']*change2
+                            actual_status[n1][dim] = float(pos1 + self.params['model']['mu']*change1)
+                            actual_status[n2][dim] = float(pos2 + self.params['model']['mu']*change2)
 
 
                         if len(self.node_data) == 0:
-                            self.sts[n1][dim] = actual_status[n1][dim]
-                            self.sts[n2][dim] = actual_status[n2][dim]
+                            #print("This is the type", type(actual_status[n1][dim]))
+                            self.sts[n1][dim] = float(actual_status[n1][dim])
+                            self.sts[n2][dim] = float(actual_status[n2][dim])
             else:
                 #print("This mean we are working in unidimensional space")
                 if diff < self.params['model']['epsilon']:
@@ -517,6 +519,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                     if len(self.node_data) == 0:
                         self.sts[n1] = actual_status[n1]
+
                         self.sts[n2] = actual_status[n2]
             #delta, node_count, status_delta = self.status_delta(actual_status)
 
@@ -532,10 +535,10 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         if node_status:
             #print("what is the iteration number", self.actual_iteration)
-            return {"iteration": self.actual_iteration - 1, "status": delta,
+            return {"iteration": self.actual_iteration - 1, "status": actual_status.copy(),
                     "node_count": node_count.copy(), "status_delta": status_delta.copy()}
         else:
-            print("Are we getting stuck here?")
+            #print("Are we getting stuck here?")
             return {"iteration": self.actual_iteration - 1, "status": {},
                     "node_count": node_count.copy(), "status_delta": status_delta.copy()}
 
@@ -568,4 +571,4 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
     #         if steady_it == nsteady:
     #             return system_status[:-nsteady]
 
-        return system_status
+    #    return system_status
