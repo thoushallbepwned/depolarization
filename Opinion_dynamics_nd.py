@@ -18,11 +18,13 @@ import numpy as np
 from tqdm import tqdm
 #from tkinter import *
 import pandas as pd
+import seaborn as sns
+from PIL import Image
 
 # Network topology
 # parameters governing the graph structure
 
-n = 1000 # number of nodes Note: This should be an even number to ensure stability
+n = 100 # number of nodes Note: This should be an even number to ensure stability
 m = 8 # number of edges per node
 p = 0.70 # probability of rewiring each edge
 minority_fraction = 0.5 # fraction of minority nodes in the network
@@ -58,10 +60,10 @@ def Extract(lst):
 #Simulation execution
 epochs = 5
 iterations = model.iteration_bunch(epochs, node_status = True, progress_bar = True)
-
+#print(iterations)
 test_vector = iterations[0]['status']
 control_graph = g.copy()
-print("Initial distribution", test_vector)
+#print("Initial distribution", test_vector)
 
 # assigning opinions to nodes
 for nodes in control_graph.nodes:
@@ -74,7 +76,7 @@ data_1 =np.array(int)
 #print("assortivity before opinion dynamics for color", nx.attribute_assortativity_coefficient(control_graph, 'color'))
 #print("assortivity before opinion dynamics for opinion", nx.numeric_assortativity_coefficient(control_graph, 'opinion'))
 opinion_vector = iterations[epochs-1]['status']
-print("Final distribution", opinion_vector)
+#print("Final distribution", opinion_vector)
 
 for nodes in g.nodes:
      g.nodes[nodes]['opinion'] = opinion_vector[nodes]
@@ -107,6 +109,41 @@ plt.subplots_adjust(hspace=0.4, wspace=0.4)
 plt.show()
 
 
+data = iterations
+# Number of nodes
+n_nodes = n
 
-viz = OpinionEvolution(model, iterations)
-viz.plot("opinion_ev.pdf")
+# Number of dimensions
+n_dimensions = d
+
+# Initialize a list to store data for each dimension
+dimensions_data = [[] for _ in range(n_dimensions)]
+
+
+print(data)
+
+for it in range(epochs):
+    print(data[it]['status'])
+    for
+
+#for d in range(d):
+#    print(data['status'])
+        #print(node)
+
+
+
+# # Iterate through the dimensions and plot the data
+# for i, dimension_data in enumerate(dimensions_data):
+#     axes[i].set_title(f'Dimension {i + 1}')
+#     axes[i].set_xlabel('Node Index')
+#     axes[i].set_ylabel('Value')
+#
+#     # Plot the data for the current dimension
+#     for node, value in dimension_data:
+#         axes[i].scatter(node, value, label=f'Node {node}')
+#         axes[i].legend()
+#
+# plt.tight_layout()
+# plt.show()
+
+# Plotting the evolution of the opinion dynamics
