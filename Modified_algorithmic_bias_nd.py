@@ -6,6 +6,8 @@ import future.utils
 from collections import defaultdict
 import tqdm
 import scipy.stats as stats
+#import matplotlib
+#matplotlib.use('TkAgg')
 import matplotlib.pyplot as plt
 import networkx as nx
 import copy
@@ -192,9 +194,15 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     # print(cov.shape)
                     cov = np.outer(sigma * sigma, correlation_matrix)
                     cov = np.reshape(cov, (d, d))
-                    print(cov)
+                    #print(cov)
                     s = np.random.multivariate_normal(mu, cov, n)
                     s = s / np.max(s)
+
+                    fig = plt.figure()
+                    ax = fig.add_subplot(111, projection='3d')
+                    img = ax.scatter(s[:, 0], s[:, 1], s[:, 2], c=s[:, 3], cmap=plt.hot())
+                    fig.colorbar(img)
+                    plt.show()
 
             if d == 1:
                 mu = np.random.uniform(low=-0.25, high=0.25, size=d)
@@ -204,6 +212,9 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                 truncacted_array = X.rvs(n)
                 s = np.reshape(truncacted_array, (n, 1))
+
+
+
             return (s)
 
         def mixed_distr_nd(G, n, minority_fraction, d, gamma_cov):
@@ -230,8 +241,8 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 else:
                     print("going normal")
                     s_1 = normal_distr_nd(G, n, 1, gamma_cov)
-                    plt.hist(s_1, range=(-1, 1), bins=50)
-                    plt.show()
+                    #plt.hist(s_1, range=(-1, 1), bins=50)
+                    #plt.show()
                 s[:, i] = s_1[:, 0]
             return s
 
@@ -257,15 +268,28 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 print(self.status[node])
             print("nice, we can skip this")
 
+        if self.params['model']['mode'] == 'mixed':
+            print("set to mixed mode")
+            s = mixed_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'], self.params['model']['dims'], self.params['model']['gamma_cov'])
+            sorted_dist = np.sort(s, axis = 0)
+            i = 0
+            for node in index_list:
+                entry = sorted_dist[i].flatten()
+                if self.params['model']['dims'] == 1:
+
+                    self.status[node] = float(entry)
+                else:
+                    self.status[node] = entry.tolist()
+                #print(type(entry))
+                i += 1
+            self.initial_status = self.status.copy()
+
         if self.params['model']['mode'] == 'normal':
             print("set to normal mode")
             s = normal_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['dims'], self.params['model']['gamma_cov'])
             #print("this is the shape of s", s, s.shape)
 
             sorted_dist = np.sort(s, axis = 0)
-            #print(sorted_dist, sorted_dist.shape)
-            #print( np.mean(s, axis = 0), np.mean((s+2), axis = 0))
-
             i = 0
             for node in index_list:
                 entry = sorted_dist[i].flatten()
@@ -286,18 +310,15 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             dist = polarized_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'],self.params['model']['dims'], self.params['model']['gamma_cov'])
             #dist = [(2*x) -1 for x in dist]
             sorted_dist = np.sort(dist, axis = 0)
-
-
-            sorted_dist_round = np.round(sorted_dist)
-            plt.hist(dist, range = (-1,1), bins = 50)
-            plt.show( )
-
+            #sorted_dist_round = np.round(sorted_dist)
             i = 0
             for node in index_list:
+                entry = sorted_dist[i].flatten()
+                if self.params['model']['dims'] == 1:
 
-                self.status[node] = sorted_dist[i]
-                #print(self.status[node])
-
+                    self.status[node] = float(entry)
+                else:
+                    self.status[node] = entry.tolist()
                 i += 1
 
             self.initial_status = self.status.copy()
@@ -307,8 +328,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         ### Initialization numpy representation
 
         max_edgees = (self.graph.number_of_nodes() * (self.graph.number_of_nodes() - 1)) / 2
-        #print("what is this structure", self.status.items())
-        #print("what is nids?", np.array(list(self.status.items())))
+
 
         if self.params['model']['dims'] == 1:
             nids = np.array(list(self.status.items()))
@@ -316,15 +336,10 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         else:
             nids = list(self.status.items())
             self.ids = Extract(nids)
-
-        #print("what are nids exactly?", nids)
-
-        #print("and what do we need for the ids?", self.ids)
         # self.ids = np.array(len(self.graph.nodes()))
 
         if max_edgees == self.graph.number_of_edges():
             self.sts = nids[:, 1]
-            #print("what is sts?", self.sts)
 
         else:
             "Found the location where a bunch of things need to change"
@@ -381,8 +396,9 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         if self.actual_iteration == 0:
             self.actual_iteration += 1
+
             delta, node_count, status_delta = self.status_delta(self.status)
-            print(delta, node_count, status_delta)
+            #print(delta, node_count, status_delta)
             if node_status:
                 #print("what is the status here?", actual_status)
                 return {"iteration": 0, "status": actual_status,
