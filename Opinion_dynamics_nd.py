@@ -23,7 +23,7 @@ import seaborn as sns
 # Network topology
 # parameters governing the graph structure
 
-n = 10000 # number of nodes Note: This should be an even number to ensure stability
+n = 1000 # number of nodes Note: This should be an even number to ensure stability
 m = 8 # number of edges per node
 p = 0.70 # probability of rewiring each edge
 minority_fraction = 0.5 # fraction of minority nodes in the network
@@ -62,7 +62,7 @@ iterations = model.iteration_bunch(epochs, node_status = True, progress_bar = Tr
 
 test_vector = iterations[0]['status']
 control_graph = g.copy()
-print("Initial distribution", test_vector)
+#print("Initial distribution", test_vector)
 
 # assigning opinions to nodes
 for nodes in control_graph.nodes:
@@ -75,7 +75,7 @@ data_1 =np.array(int)
 #print("assortivity before opinion dynamics for color", nx.attribute_assortativity_coefficient(control_graph, 'color'))
 #print("assortivity before opinion dynamics for opinion", nx.numeric_assortativity_coefficient(control_graph, 'opinion'))
 opinion_vector = iterations[epochs-1]['status']
-print("Final distribution", opinion_vector)
+#print("Final distribution", opinion_vector)
 
 for nodes in g.nodes:
      g.nodes[nodes]['opinion'] = opinion_vector[nodes]
@@ -108,32 +108,6 @@ plt.subplots_adjust(hspace=0.4, wspace=0.4)
 plt.show()
 
 #trying to plot evolution per dimension
-
-
-
-
-
-
-# # Extract the dth opinion for all nodes across iterations
-# for d in range(d):
-#     opinions_d = [[opinions[d] for node, opinions in iteration['status'].items()] for iteration in iterations]
-#     print(opinions_d)
-#
-# import matplotlib.pyplot as plt
-#
-# # Transpose the opinions_d list for easier plotting
-# opinions_d_T = list(zip(*opinions_d))
-#
-# # Plot the dth opinion for each node
-# for i, node_opinions in enumerate(opinions_d_T):
-#     plt.plot(node_opinions, label=f'Node {i}')
-#
-# plt.xlabel('Iterations')
-# plt.ylabel(f'Opinion {d}')
-# plt.legend()
-# plt.show()
-
-
 fig, axes = plt.subplots(d, 1, figsize=(6, d * 3), sharex=True)
 
 for d_index in range(d):
