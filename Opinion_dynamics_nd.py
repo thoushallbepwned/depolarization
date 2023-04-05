@@ -91,6 +91,8 @@ data_2 =np.array(int)
 df_before = pd.DataFrame(data_1, columns=[f'Dimension {i + 1}' for i in range(d)])
 df_after = pd.DataFrame(data_2, columns=[f'Dimension {i + 1}' for i in range(d)])
 
+
+# Plot histograms
 # Create subplots
 fig, axes = plt.subplots(2, 2, figsize=(10, 8))
 axes = axes.ravel()
