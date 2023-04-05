@@ -18,11 +18,12 @@ import numpy as np
 from tqdm import tqdm
 #from tkinter import *
 import pandas as pd
+import seaborn as sns
 
 # Network topology
 # parameters governing the graph structure
 
-n = 1000 # number of nodes Note: This should be an even number to ensure stability
+n = 10000 # number of nodes Note: This should be an even number to ensure stability
 m = 8 # number of edges per node
 p = 0.70 # probability of rewiring each edge
 minority_fraction = 0.5 # fraction of minority nodes in the network
@@ -106,7 +107,59 @@ plt.subplots_adjust(hspace=0.4, wspace=0.4)
 
 plt.show()
 
+#trying to plot evolution per dimension
 
+
+
+
+
+
+# # Extract the dth opinion for all nodes across iterations
+# for d in range(d):
+#     opinions_d = [[opinions[d] for node, opinions in iteration['status'].items()] for iteration in iterations]
+#     print(opinions_d)
+#
+# import matplotlib.pyplot as plt
+#
+# # Transpose the opinions_d list for easier plotting
+# opinions_d_T = list(zip(*opinions_d))
+#
+# # Plot the dth opinion for each node
+# for i, node_opinions in enumerate(opinions_d_T):
+#     plt.plot(node_opinions, label=f'Node {i}')
+#
+# plt.xlabel('Iterations')
+# plt.ylabel(f'Opinion {d}')
+# plt.legend()
+# plt.show()
+
+
+fig, axes = plt.subplots(d, 1, figsize=(6, d * 3), sharex=True)
+
+for d_index in range(d):
+    # Extract the dth opinion for all nodes across iterations
+    opinions_d = [[opinions[d_index] for node, opinions in iteration['status'].items()] for iteration in iterations]
+
+    # Transpose the opinions_d list for easier plotting
+    opinions_d_T = list(zip(*opinions_d))
+
+    # Plot the dth opinion for each node
+    for i, node_opinions in enumerate(opinions_d_T):
+        axes[d_index].plot(node_opinions, color='black', alpha = 0.5)
+
+    axes[d_index].set_ylabel(f'Opinion {d_index}')
+    axes[d_index].legend()
+
+plt.xlabel('Iterations')
+fig.tight_layout()
+plt.show()
+
+
+
+
+##for d in range(d):
+#    opinions_d = [[node[opinions[d]] for node, opinions in iteration.items()] for iteration in iterations]
+#    print(opinions_d)
 
 viz = OpinionEvolution(model, iterations)
 viz.plot("opinion_ev.pdf")
