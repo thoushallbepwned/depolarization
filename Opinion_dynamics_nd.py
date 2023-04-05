@@ -19,12 +19,11 @@ from tqdm import tqdm
 #from tkinter import *
 import pandas as pd
 import seaborn as sns
-from PIL import Image
 
 # Network topology
 # parameters governing the graph structure
 
-n = 100 # number of nodes Note: This should be an even number to ensure stability
+n = 1000 # number of nodes Note: This should be an even number to ensure stability
 m = 8 # number of edges per node
 p = 0.70 # probability of rewiring each edge
 minority_fraction = 0.5 # fraction of minority nodes in the network
@@ -60,7 +59,7 @@ def Extract(lst):
 #Simulation execution
 epochs = 5
 iterations = model.iteration_bunch(epochs, node_status = True, progress_bar = True)
-#print(iterations)
+
 test_vector = iterations[0]['status']
 control_graph = g.copy()
 #print("Initial distribution", test_vector)
@@ -92,6 +91,8 @@ data_2 =np.array(int)
 df_before = pd.DataFrame(data_1, columns=[f'Dimension {i + 1}' for i in range(d)])
 df_after = pd.DataFrame(data_2, columns=[f'Dimension {i + 1}' for i in range(d)])
 
+
+# Plot histograms
 # Create subplots
 fig, axes = plt.subplots(2, 2, figsize=(10, 8))
 axes = axes.ravel()
@@ -108,42 +109,33 @@ plt.subplots_adjust(hspace=0.4, wspace=0.4)
 
 plt.show()
 
+#trying to plot evolution per dimension
+fig, axes = plt.subplots(d, 1, figsize=(6, d * 3), sharex=True)
 
-data = iterations
-# Number of nodes
-n_nodes = n
+for d_index in range(d):
+    # Extract the dth opinion for all nodes across iterations
+    opinions_d = [[opinions[d_index] for node, opinions in iteration['status'].items()] for iteration in iterations]
 
-# Number of dimensions
-n_dimensions = d
+    # Transpose the opinions_d list for easier plotting
+    opinions_d_T = list(zip(*opinions_d))
 
-# Initialize a list to store data for each dimension
-dimensions_data = [[] for _ in range(n_dimensions)]
+    # Plot the dth opinion for each node
+    for i, node_opinions in enumerate(opinions_d_T):
+        axes[d_index].plot(node_opinions, color='black', alpha = 0.5)
 
+    axes[d_index].set_ylabel(f'Opinion {d_index}')
+    axes[d_index].legend()
 
-print(data)
-
-for it in range(epochs):
-    print(data[it]['status'])
-    for
-
-#for d in range(d):
-#    print(data['status'])
-        #print(node)
-
+plt.xlabel('Iterations')
+fig.tight_layout()
+plt.show()
 
 
-# # Iterate through the dimensions and plot the data
-# for i, dimension_data in enumerate(dimensions_data):
-#     axes[i].set_title(f'Dimension {i + 1}')
-#     axes[i].set_xlabel('Node Index')
-#     axes[i].set_ylabel('Value')
-#
-#     # Plot the data for the current dimension
-#     for node, value in dimension_data:
-#         axes[i].scatter(node, value, label=f'Node {node}')
-#         axes[i].legend()
-#
-# plt.tight_layout()
-# plt.show()
 
-# Plotting the evolution of the opinion dynamics
+
+##for d in range(d):
+#    opinions_d = [[node[opinions[d]] for node, opinions in iteration.items()] for iteration in iterations]
+#    print(opinions_d)
+
+viz = OpinionEvolution(model, iterations)
+viz.plot("opinion_ev.pdf")

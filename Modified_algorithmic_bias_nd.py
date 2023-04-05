@@ -227,22 +227,18 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
             s = np.zeros((n, d))
             correlation_matrix = np.identity(d) * (1 - gamma_cov) + gamma_cov
-            # print(correlation_matrix)
+
             options = ["a", "b"]
             for i in range(d):
                 choices = random.choices(options, weights=[1, 1], k=1)
-                # print("what did we pick?", choices)
 
                 if choices[0] == "a":
                     print("going polarized")
                     s_1 = polarized_distr_nd(G, n, minority_fraction, 1, gamma_cov)
-                    plt.hist(s_1, range=(-1, 1), bins=50)
-                    plt.show()
+
                 else:
                     print("going normal")
                     s_1 = normal_distr_nd(G, n, 1, gamma_cov)
-                    #plt.hist(s_1, range=(-1, 1), bins=50)
-                    #plt.show()
                 s[:, i] = s_1[:, 0]
             return s
 
@@ -300,8 +296,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     self.status[node] = entry.tolist()
                 #print(type(entry))
                 i += 1
-            #print("Wtf is this?", self.status)
-            #print("the shape is", self.status.items())
+
             self.initial_status = self.status.copy()
 
         if self.params['model']['mode'] == 'polarized':
