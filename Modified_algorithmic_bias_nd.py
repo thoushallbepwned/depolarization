@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import copy
 import mpl_toolkits.mplot3d as Axes3D
-
+from scipy.spatial import distance
 
 __author__ = ["Alina Sirbu", "Giulio Rossetti", "Valentina Pansanella"]
 __email__ = ["alina.sirbu@unipi.it", "giulio.rossetti@isti.cnr.it", "valentina.pansanella@sns.it"]
@@ -77,6 +77,11 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 "gamma_cov": {
                     "descr": "Correlation between dimensions",
                     "range": [0, 1],
+                    "optional": False
+                },
+                "distance_method": {
+                    "descr": "Distance method",
+                    "range": ["euclidean", "manhattan", "chebyshev"],
                     "optional": False
                 },
             },
@@ -254,16 +259,6 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         else:
             print("running in noisy mode")
 
-        if self.params['model']['mode'] == 'none':
-            x = nx.get_node_attributes(self.graph, 'status')
-
-            opinions = list(x.values())
-            print(int)
-            for node in self.status:
-                self.status[node] = opinions[int(node)]
-                print(self.status[node])
-            print("nice, we can skip this")
-
         if self.params['model']['mode'] == 'mixed':
             print("set to mixed mode")
             s = mixed_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'], self.params['model']['dims'], self.params['model']['gamma_cov'])
@@ -317,8 +312,6 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 i += 1
 
             self.initial_status = self.status.copy()
-
-
 
         ### Initialization numpy representation
 
@@ -453,20 +446,91 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
             "Stuff gets interesting here, because we will need to specify a distance metric here to govern the interaction"
             "Adding forloop here that will iterate over dimensions"
-            if self.params['model']['dims'] > 1:
-                diff = [abs((actual_status[n1][d]+2) - (actual_status[n2][d]+2)) for d in range(self.params['model']['dims'])]
-            else:
-                diff = np.abs((actual_status[n1]+2) - (actual_status[n2]+2))
 
-            diff = np.array(diff)
+            "converting epsilon into a cosine metric"
+            cos_epsilon = self.params['model']['epsilon'] * 2 - 1
 
+            "Setting 1: Euclidean distance per dimension"
+            if self.params['model']['distance_method'] == 'euclidean':
+                if self.params['model']['dims'] > 1:
+                    diff = [abs((actual_status[n1][d]+2) - (actual_status[n2][d]+2)) for d in range(self.params['model']['dims'])]
+                else:
+                    diff  = np.abs((actual_status[n1]+2) - (actual_status[n2]+2))
+
+                diff = np.array(diff)
+
+            "Setting 2: Cosine distance"
+
+            if self.params['model']['distance_method'] == 'cosine':
+                if self.params['model']['dims'] == 1:
+                    print("Single dimensional cosine distance does not make sense, changing parameters to euclidean")
+                    diff = np.abs((actual_status[n1] + 2) - (actual_status[n2] + 2))
+
+                else:
+                    diff = 1- distance.cosine(actual_status[n1], actual_status[n2])
+                    #print(actual_status[n1], actual_status[n2])
+            "Setting 3: Size cosine distance"
+            if self.params['model']['distance_method'] == 'size_cosine':
+                if self.params['model']['dims'] == 1:
+                    print("Single dimensional cosine distance does not make sense, changing parameters to euclidean")
+                    diff = np.abs((actual_status[n1] + 2) - (actual_status[n2] + 2))
+                else:
+                    "Taking the biggest vector"
+                    a = np.linalg.norm(actual_status[n1])
+                    b = np.linalg.norm(actual_status[n2])
+
+                    if a > b:
+                        size = a
+                        print("a is bigger")
+                        diff = (1 - distance.cosine(actual_status[n1], actual_status[n2]))*size
+                    else:
+                        print("b is bigger")
+                        size = b
+                        diff = (1 - distance.cosine(actual_status[n1], actual_status[n2]))*size
+
+            "Setting 4: mean euclidean distance"
+            if self.params['model']['distance_method'] == 'mean_euclidean':
+                if self.params['model']['dims'] > 1:
+                    diff = [abs((actual_status[n1][d]+2) - (actual_status[n2][d]+2)) for d in range(self.params['model']['dims'])]
+                    diff = np.mean(diff)
+                else:
+                    diff  = np.abs((actual_status[n1]+2) - (actual_status[n2]+2))
+
+                diff = np.array(diff)
+            ############################################################################################################
             "First model: We are going to iterate over all admissible dimension"
+
+
+
+            "creating allowance parameter"
+
+            if self.params['model']['distance_method'] == 'euclidean':
+                if float(diff) < self.params['model']['epsilon']:
+                    allowance = True
+                else:
+                    allowance = False
+            elif self.params['model']['distance_method'] == 'cosine':
+                if diff < cos_epsilon:
+                    allowance = True
+                else:
+                    allowance = False
+            elif self.params['model']['distance_method'] == 'size_cosine':
+                if diff < cos_epsilon:
+                    allowance = True
+                else:
+                    allowance = False
+            elif self.params['model']['distance_method'] == 'mean_euclidean':
+                if diff < self.params['model']['epsilon']:
+                    allowance = True
+                else:
+                    allowance = False
 
             if self.params['model']['dims'] > 1:
                 #print("This means that we are working in multidimensional space")
                 for dim in range(self.params['model']['dims']):
 
-                    if float(diff[dim]) < self.params['model']['epsilon']:
+                    if allowance == True:
+                        print("Allowance is true, we are going to interact")
 
                         # Adding a little bit of extra noise into the equation
                         if self.params['model']['noise'] > 0:
@@ -556,6 +620,9 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             return {"iteration": self.actual_iteration - 1, "status": {},
                     "node_count": node_count.copy(), "status_delta": status_delta.copy()}
 
+
+
+        #print("This is th
     # def steady_state(self, max_iterations=100000, nsteady=1000, sensibility=0.00001, node_status=True,
     #                  progress_bar=True):
     #     """
@@ -585,4 +652,4 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
     #         if steady_it == nsteady:
     #             return system_status[:-nsteady]
 
-        return system_status
+       # return system_status

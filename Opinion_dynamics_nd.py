@@ -22,6 +22,7 @@ import seaborn as sns
 
 # Network topology
 # parameters governing the graph structure
+"These variables should remain constant for all experimental runs"
 
 n = 1000 # number of nodes Note: This should be an even number to ensure stability
 m = 8 # number of edges per node
@@ -37,9 +38,11 @@ g = homophilic_barabasi_albert_graph(n, m, minority_fraction, similitude, p) # g
 # Model selection
 model = AlgorithmicBiasModel_nd(g)
 
+
+"These variables are editable for each experimental run"
 # Model Configuration
 config = mc.Configuration()
-config.add_model_parameter("epsilon", 1) #bounded confidence parameter
+config.add_model_parameter("epsilon", 0.5) #bounded confidence parameter
 config.add_model_parameter("mu", 0.5) #convergence parameter
 config.add_model_parameter("gamma", 0) #bias parameter
 config.add_model_parameter("mode", "mixed") #initial opinion distribution
@@ -47,6 +50,7 @@ config.add_model_parameter("noise", 0) # noise parameter that cannot exceed 10%
 config.add_model_parameter("minority_fraction", minority_fraction) # minority fraction in the network
 config.add_model_parameter("dims", d) # number of dimensions
 config.add_model_parameter("gamma_cov", 0.35) # correlation between dimensions
+config.add_model_parameter("distance_method", "mean_euclidean") # fraction of minority nodes in the network
 model.set_initial_status(config)
 
 
@@ -54,6 +58,18 @@ model.set_initial_status(config)
 
 def Extract(lst):
     return [item[0] for item in lst]
+
+def generate_title(config):
+    model_parameters = config.get_model_parameters()
+
+    title = (
+        f"epsilon: {model_parameters['epsilon']}, "
+        f"mu: {model_parameters['mu']}, "
+        f"noise: {model_parameters['noise']}, "
+        f"dims: {model_parameters['dims']}, "
+        f"gamma_cov: {model_parameters['gamma_cov']}"
+    )
+    return title
 
 
 #Simulation execution
@@ -71,11 +87,7 @@ for nodes in control_graph.nodes:
 x_before =nx.get_node_attributes(control_graph, 'opinion')
 int = list(x_before.values())
 data_1 =np.array(int)
-
-#print("assortivity before opinion dynamics for color", nx.attribute_assortativity_coefficient(control_graph, 'color'))
-#print("assortivity before opinion dynamics for opinion", nx.numeric_assortativity_coefficient(control_graph, 'opinion'))
 opinion_vector = iterations[epochs-1]['status']
-#print("Final distribution", opinion_vector)
 
 for nodes in g.nodes:
      g.nodes[nodes]['opinion'] = opinion_vector[nodes]
@@ -103,6 +115,7 @@ for i, col in enumerate(df_before.columns):
     axes[i].hist(df_after[col], bins=20, alpha=0.5, label='After Opinion Dynamics', color='green')
     axes[i].set_title(f'Histogram for {col}')
     axes[i].legend()
+plt.suptitle(generate_title(config), fontsize=12)
 
 # Adjust spacing between subplots
 plt.subplots_adjust(hspace=0.4, wspace=0.4)
@@ -125,17 +138,10 @@ for d_index in range(d):
 
     axes[d_index].set_ylabel(f'Opinion {d_index}')
     axes[d_index].legend()
+    axes[d_index].set_ylim(-1, 1)
 
+
+plt.suptitle(generate_title(config), fontsize=12)
 plt.xlabel('Iterations')
 fig.tight_layout()
 plt.show()
-
-
-
-
-##for d in range(d):
-#    opinions_d = [[node[opinions[d]] for node, opinions in iteration.items()] for iteration in iterations]
-#    print(opinions_d)
-
-viz = OpinionEvolution(model, iterations)
-viz.plot("opinion_ev.pdf")
