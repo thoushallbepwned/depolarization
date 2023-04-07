@@ -24,124 +24,138 @@ import seaborn as sns
 # parameters governing the graph structure
 "These variables should remain constant for all experimental runs"
 
-n = 1000 # number of nodes Note: This should be an even number to ensure stability
-m = 8 # number of edges per node
-p = 0.70 # probability of rewiring each edge
-minority_fraction = 0.5 # fraction of minority nodes in the network
-similitude = 0.8 # similarity metric
-d = 4 # number of dimension
-#gamma = 0.5 # correlation between dimensions
+def run_simulation(distance_method, mode, epsilon):
 
-# Generating graph
-g = homophilic_barabasi_albert_graph(n, m, minority_fraction, similitude, p) # generating Graph
+    n = 1000 # number of nodes Note: This should be an even number to ensure stability
+    m = 8 # number of edges per node
+    p = 0.70 # probability of rewiring each edge
+    minority_fraction = 0.5 # fraction of minority nodes in the network
+    similitude = 0.8 # similarity metric
+    d = 4 # number of dimension
+    #gamma = 0.5 # correlation between dimensions
 
-# Model selection
-model = AlgorithmicBiasModel_nd(g)
+    # Generating graph
+    g = homophilic_barabasi_albert_graph(n, m, minority_fraction, similitude, p) # generating Graph
 
-
-"These variables are editable for each experimental run"
-# Model Configuration
-config = mc.Configuration()
-config.add_model_parameter("epsilon", 0.5) #bounded confidence parameter
-config.add_model_parameter("mu", 0.5) #convergence parameter
-config.add_model_parameter("gamma", 0) #bias parameter
-config.add_model_parameter("mode", "mixed") #initial opinion distribution
-config.add_model_parameter("noise", 0) # noise parameter that cannot exceed 10%
-config.add_model_parameter("minority_fraction", minority_fraction) # minority fraction in the network
-config.add_model_parameter("dims", d) # number of dimensions
-config.add_model_parameter("gamma_cov", 0.35) # correlation between dimensions
-config.add_model_parameter("distance_method", "mean_euclidean") # fraction of minority nodes in the network
-model.set_initial_status(config)
+    # Model selection
+    model = AlgorithmicBiasModel_nd(g)
 
 
-# Defining helper functions to perform seeding
-
-def Extract(lst):
-    return [item[0] for item in lst]
-
-def generate_title(config):
-    model_parameters = config.get_model_parameters()
-
-    title = (
-        f"epsilon: {model_parameters['epsilon']}, "
-        f"mu: {model_parameters['mu']}, "
-        f"noise: {model_parameters['noise']}, "
-        f"dims: {model_parameters['dims']}, "
-        f"gamma_cov: {model_parameters['gamma_cov']}"
-    )
-    return title
+    "These variables are editable for each experimental run"
+    # Model Configuration
+    config = mc.Configuration()
+    config.add_model_parameter("epsilon", epsilon) #bounded confidence parameter
+    config.add_model_parameter("mu", 0.5) #convergence parameter
+    config.add_model_parameter("gamma", 0) #bias parameter
+    config.add_model_parameter("mode", mode) #initial opinion distribution
+    config.add_model_parameter("noise", 0) # noise parameter that cannot exceed 10%
+    config.add_model_parameter("minority_fraction", minority_fraction) # minority fraction in the network
+    config.add_model_parameter("dims", d) # number of dimensions
+    config.add_model_parameter("gamma_cov", 0.35) # correlation between dimensions
+    config.add_model_parameter("distance_method", distance_method) # fraction of minority nodes in the network
+    model.set_initial_status(config)
 
 
-#Simulation execution
-epochs = 5
-iterations = model.iteration_bunch(epochs, node_status = True, progress_bar = True)
+    # Defining helper functions to perform seeding
 
-test_vector = iterations[0]['status']
-control_graph = g.copy()
-#print("Initial distribution", test_vector)
+    def Extract(lst):
+        return [item[0] for item in lst]
 
-# assigning opinions to nodes
-for nodes in control_graph.nodes:
-     control_graph.nodes[nodes]['opinion'] = test_vector[nodes]
+    def generate_title(config):
+        model_parameters = config.get_model_parameters()
 
-x_before =nx.get_node_attributes(control_graph, 'opinion')
-int = list(x_before.values())
-data_1 =np.array(int)
-opinion_vector = iterations[epochs-1]['status']
-
-for nodes in g.nodes:
-     g.nodes[nodes]['opinion'] = opinion_vector[nodes]
-
-# visualization
+        title = (
+            f"epsilon: {model_parameters['epsilon']}, "
+            f"mu: {model_parameters['mu']}, "
+            f"noise: {model_parameters['noise']}, "
+            f"dims: {model_parameters['dims']}, "
+            f"gamma_cov: {model_parameters['gamma_cov']},"
+            f"distance_method: {model_parameters['distance_method']}"
+        )
+        return title
 
 
-"Visualization before and after "
-x_after =nx.get_node_attributes(g, 'opinion')
-int = list(x_after.values())
-data_2 =np.array(int)
+    #Simulation execution
+    epochs = 15
+    iterations = model.iteration_bunch(epochs, node_status = True, progress_bar = True)
 
-df_before = pd.DataFrame(data_1, columns=[f'Dimension {i + 1}' for i in range(d)])
-df_after = pd.DataFrame(data_2, columns=[f'Dimension {i + 1}' for i in range(d)])
+    test_vector = iterations[0]['status']
+    control_graph = g.copy()
+    #print("Initial distribution", test_vector)
 
+    # assigning opinions to nodes
+    for nodes in control_graph.nodes:
+         control_graph.nodes[nodes]['opinion'] = test_vector[nodes]
 
-# Plot histograms
-# Create subplots
-fig, axes = plt.subplots(2, 2, figsize=(10, 8))
-axes = axes.ravel()
+    x_before =nx.get_node_attributes(control_graph, 'opinion')
+    int = list(x_before.values())
+    data_1 =np.array(int)
+    opinion_vector = iterations[epochs-1]['status']
 
-# Plot histograms
-for i, col in enumerate(df_before.columns):
-    axes[i].hist(df_before[col], bins=20, alpha=0.5, label='Before Opinion Dynamics', color='blue')
-    axes[i].hist(df_after[col], bins=20, alpha=0.5, label='After Opinion Dynamics', color='green')
-    axes[i].set_title(f'Histogram for {col}')
-    axes[i].legend()
-plt.suptitle(generate_title(config), fontsize=12)
+    for nodes in g.nodes:
+         g.nodes[nodes]['opinion'] = opinion_vector[nodes]
 
-# Adjust spacing between subplots
-plt.subplots_adjust(hspace=0.4, wspace=0.4)
-
-plt.show()
-
-#trying to plot evolution per dimension
-fig, axes = plt.subplots(d, 1, figsize=(6, d * 3), sharex=True)
-
-for d_index in range(d):
-    # Extract the dth opinion for all nodes across iterations
-    opinions_d = [[opinions[d_index] for node, opinions in iteration['status'].items()] for iteration in iterations]
-
-    # Transpose the opinions_d list for easier plotting
-    opinions_d_T = list(zip(*opinions_d))
-
-    # Plot the dth opinion for each node
-    for i, node_opinions in enumerate(opinions_d_T):
-        axes[d_index].plot(node_opinions, color='black', alpha = 0.5)
-
-    axes[d_index].set_ylabel(f'Opinion {d_index}')
-    axes[d_index].legend()
-    axes[d_index].set_ylim(-1, 1)
+    # visualization
 
 
-plt.suptitle(generate_title(config), fontsize=12)
-plt.xlabel('Iterations')
-fig.tight_layout()
-plt.show()
+    "Visualization before and after "
+    x_after =nx.get_node_attributes(g, 'opinion')
+    int = list(x_after.values())
+    data_2 =np.array(int)
+
+    df_before = pd.DataFrame(data_1, columns=[f'Dimension {i + 1}' for i in range(d)])
+    df_after = pd.DataFrame(data_2, columns=[f'Dimension {i + 1}' for i in range(d)])
+
+
+    # Plot histograms
+    # Create subplots
+    fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+    axes = axes.ravel()
+
+    # Plot histograms
+    for i, col in enumerate(df_before.columns):
+        axes[i].hist(df_before[col], bins=20, alpha=0.5, label='Before Opinion Dynamics', color='blue')
+        axes[i].hist(df_after[col], bins=20, alpha=0.5, label='After Opinion Dynamics', color='green')
+        axes[i].set_title(f'Histogram for {col}')
+        axes[i].legend()
+    plt.suptitle(generate_title(config), fontsize=12)
+
+    # Adjust spacing between subplots
+    plt.subplots_adjust(hspace=0.4, wspace=0.4)
+
+    plt.show()
+
+    #trying to plot evolution per dimension
+    fig, axes = plt.subplots(d, 1, figsize=(6, d * 3), sharex=True)
+
+    for d_index in range(d):
+        # Extract the dth opinion for all nodes across iterations
+        opinions_d = [[opinions[d_index] for node, opinions in iteration['status'].items()] for iteration in iterations]
+
+        # Transpose the opinions_d list for easier plotting
+        opinions_d_T = list(zip(*opinions_d))
+
+        # Plot the dth opinion for each node
+        for i, node_opinions in enumerate(opinions_d_T):
+            axes[d_index].plot(node_opinions, color='black', alpha = 0.5)
+
+        axes[d_index].set_ylabel(f'Opinion {d_index}')
+        axes[d_index].legend()
+        axes[d_index].set_ylim(-1, 1)
+
+
+    plt.suptitle(generate_title(config), fontsize=12)
+    plt.xlabel('Iterations')
+    fig.tight_layout()
+    #plt.show()
+
+    return
+
+
+if __name__ == "__main__":
+    interval = np.arange(0, 1.1, 0.1)
+    for i in interval:
+        #run_simulation("strict_euclidean", "normal",i)
+        #run_simulation("mean_euclidean", "normal", i)
+        #run_simulation("cosine", "normal", i)
+        run_simulation("size_cosine", "normal", i)

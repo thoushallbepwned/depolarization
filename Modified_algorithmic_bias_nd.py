@@ -203,11 +203,11 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     s = np.random.multivariate_normal(mu, cov, n)
                     s = s / np.max(s)
 
-                    fig = plt.figure()
-                    ax = fig.add_subplot(111, projection='3d')
-                    img = ax.scatter(s[:, 0], s[:, 1], s[:, 2], c=s[:, 3], cmap=plt.hot())
-                    fig.colorbar(img)
-                    plt.show()
+                    # fig = plt.figure()
+                    # ax = fig.add_subplot(111, projection='3d')
+                    # img = ax.scatter(s[:, 0], s[:, 1], s[:, 2], c=s[:, 3], cmap=plt.hot())
+                    # fig.colorbar(img)
+                    # plt.show()
 
             if d == 1:
                 mu = np.random.uniform(low=-0.25, high=0.25, size=d)
@@ -451,13 +451,14 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             cos_epsilon = self.params['model']['epsilon'] * 2 - 1
 
             "Setting 1: Euclidean distance per dimension"
-            if self.params['model']['distance_method'] == 'euclidean':
-                if self.params['model']['dims'] > 1:
-                    diff = [abs((actual_status[n1][d]+2) - (actual_status[n2][d]+2)) for d in range(self.params['model']['dims'])]
-                else:
-                    diff  = np.abs((actual_status[n1]+2) - (actual_status[n2]+2))
-
-                diff = np.array(diff)
+            # if self.params['model']['distance_method'] == 'euclidean':
+            #     if self.params['model']['dims'] > 1:
+            #         diff = [abs((actual_status[n1][d]+2) - (actual_status[n2][d]+2)) for d in range(self.params['model']['dims'])]
+            #     else:
+            #         diff  = np.abs((actual_status[n1]+2) - (actual_status[n2]+2))
+            #         print(diff)
+            #
+            #     diff = np.array(diff)
 
             "Setting 2: Cosine distance"
 
@@ -478,21 +479,24 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     "Taking the biggest vector"
                     a = np.linalg.norm(actual_status[n1])
                     b = np.linalg.norm(actual_status[n2])
+                    addition = abs(a-b)
+                    diff = (1 - distance.cosine(actual_status[n1], actual_status[n2])) + addition
 
-                    if a > b:
-                        size = a
-                        print("a is bigger")
-                        diff = (1 - distance.cosine(actual_status[n1], actual_status[n2]))*size
-                    else:
-                        print("b is bigger")
-                        size = b
-                        diff = (1 - distance.cosine(actual_status[n1], actual_status[n2]))*size
 
             "Setting 4: mean euclidean distance"
             if self.params['model']['distance_method'] == 'mean_euclidean':
                 if self.params['model']['dims'] > 1:
                     diff = [abs((actual_status[n1][d]+2) - (actual_status[n2][d]+2)) for d in range(self.params['model']['dims'])]
                     diff = np.mean(diff)
+                else:
+                    diff  = np.abs((actual_status[n1]+2) - (actual_status[n2]+2))
+
+                diff = np.array(diff)
+            "Setting 5: Strict Euclidean distance"
+            if self.params['model']['distance_method'] == 'strict_euclidean':
+                if self.params['model']['dims'] > 1:
+                    diff = [abs((actual_status[n1][d]+2) - (actual_status[n2][d]+2)) for d in range(self.params['model']['dims'])]
+                    diff = np.max(diff)
                 else:
                     diff  = np.abs((actual_status[n1]+2) - (actual_status[n2]+2))
 
@@ -505,7 +509,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             "creating allowance parameter"
 
             if self.params['model']['distance_method'] == 'euclidean':
-                if float(diff) < self.params['model']['epsilon']:
+                if diff < self.params['model']['epsilon']:
                     allowance = True
                 else:
                     allowance = False
@@ -524,13 +528,18 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     allowance = True
                 else:
                     allowance = False
+            elif self.params['model']['distance_method'] == 'strict_euclidean':
+                if diff < self.params['model']['epsilon']:
+                    allowance = True
+                else:
+                    allowance = False
 
             if self.params['model']['dims'] > 1:
                 #print("This means that we are working in multidimensional space")
                 for dim in range(self.params['model']['dims']):
 
                     if allowance == True:
-                        print("Allowance is true, we are going to interact")
+                        #print("Allowance is true, we are going to interact")
 
                         # Adding a little bit of extra noise into the equation
                         if self.params['model']['noise'] > 0:
