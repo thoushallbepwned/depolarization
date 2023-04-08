@@ -12,7 +12,8 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import copy
 import mpl_toolkits.mplot3d as Axes3D
-from scipy.spatial import distance
+
+from scipy.spatial.distance import cosine, euclidean
 
 __author__ = ["Alina Sirbu", "Giulio Rossetti", "Valentina Pansanella"]
 __email__ = ["alina.sirbu@unipi.it", "giulio.rossetti@isti.cnr.it", "valentina.pansanella@sns.it"]
@@ -475,7 +476,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     diff = np.abs((actual_status[n1] + 2) - (actual_status[n2] + 2))
 
                 else:
-                    diff = 1- distance.cosine(actual_status[n1], actual_status[n2])
+                    diff = 1- cosine(actual_status[n1], actual_status[n2])
                     #print(actual_status[n1], actual_status[n2])
             "Setting 3: Size cosine distance"
             if self.params['model']['distance_method'] == 'size_cosine':
@@ -484,10 +485,9 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     diff = np.abs((actual_status[n1] + 2) - (actual_status[n2] + 2))
                 else:
                     "Taking the biggest vector"
-                    a = np.linalg.norm(actual_status[n1])
-                    b = np.linalg.norm(actual_status[n2])
-                    addition = abs(a-b)
-                    diff = (1 - distance.cosine(actual_status[n1], actual_status[n2])) + addition
+                    cosine_sim = cosine(actual_status[n1], actual_status[n2])
+                    euclidean_dist = euclidean(actual_status[n1], actual_status[n2])
+                    diff = (cosine_sim + euclidean_dist)/2
 
 
             "Setting 4: mean euclidean distance"
