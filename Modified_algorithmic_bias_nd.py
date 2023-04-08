@@ -110,10 +110,10 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         if self.params['model']['fixed'] == True:
 
-            seed_list = [42,420, 1337, 299792489, 1442, 100]
+            #seed_list = [42,420, 1337, 299792489, 1442, 100]
 
-            choice = random.choice(seed_list)
-            np.random.seed(choice)
+            #choice = random.choice(seed_list)
+            np.random.seed(42)
 
         def Extract(lst):
             return [item[0] for item in lst]
