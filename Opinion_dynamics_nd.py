@@ -19,6 +19,10 @@ from tqdm import tqdm
 #from tkinter import *
 import pandas as pd
 import seaborn as sns
+import warnings
+import os
+
+warnings.filterwarnings("ignore")
 
 # Network topology
 # parameters governing the graph structure
@@ -53,6 +57,7 @@ def run_simulation(distance_method, mode, epsilon):
     config.add_model_parameter("dims", d) # number of dimensions
     config.add_model_parameter("gamma_cov", 0.35) # correlation between dimensions
     config.add_model_parameter("distance_method", distance_method) # fraction of minority nodes in the network
+    config.add_model_parameter("fixed", True) # distribution opinion parameter
     model.set_initial_status(config)
 
 
@@ -65,19 +70,19 @@ def run_simulation(distance_method, mode, epsilon):
         model_parameters = config.get_model_parameters()
 
         title = (
-            f"epsilon: {model_parameters['epsilon']}, "
+            f"epsilon: {np.round(model_parameters['epsilon'],2)}, "
             f"mu: {model_parameters['mu']}, "
             f"noise: {model_parameters['noise']}, "
             f"dims: {model_parameters['dims']}, "
-            f"gamma_cov: {model_parameters['gamma_cov']},"
-            f"distance_method: {model_parameters['distance_method']}"
+            f"cov: {model_parameters['gamma_cov']},"
+            f"dm: {model_parameters['distance_method']}"
         )
         return title
 
 
     #Simulation execution
     epochs = 15
-    iterations = model.iteration_bunch(epochs, node_status = True, progress_bar = True)
+    iterations = model.iteration_bunch(epochs, node_status = True, progress_bar = False)
 
     test_vector = iterations[0]['status']
     control_graph = g.copy()
@@ -123,7 +128,7 @@ def run_simulation(distance_method, mode, epsilon):
     # Adjust spacing between subplots
     plt.subplots_adjust(hspace=0.4, wspace=0.4)
 
-    plt.show()
+    a = plt.gcf()
 
     #trying to plot evolution per dimension
     fig, axes = plt.subplots(d, 1, figsize=(6, d * 3), sharex=True)
@@ -140,22 +145,32 @@ def run_simulation(distance_method, mode, epsilon):
             axes[d_index].plot(node_opinions, color='black', alpha = 0.5)
 
         axes[d_index].set_ylabel(f'Opinion {d_index}')
-        axes[d_index].legend()
+        #axes[d_index].legend()
         axes[d_index].set_ylim(-1, 1)
 
 
     plt.suptitle(generate_title(config), fontsize=12)
     plt.xlabel('Iterations')
     fig.tight_layout()
-    #plt.show()
+    b = plt.gcf()
 
-    return
+    return a, b
 
 
 if __name__ == "__main__":
     interval = np.arange(0, 1.1, 0.1)
-    for i in interval:
-        #run_simulation("strict_euclidean", "normal",i)
-        #run_simulation("mean_euclidean", "normal", i)
-        #run_simulation("cosine", "normal", i)
-        run_simulation("size_cosine", "normal", i)
+
+    method_list = ["size_cosine"]#, "strict_euclidean", "mean_euclidean", "cosine"]
+    seeding_list = ["normal", "polarized", "mixed"]
+
+    for method in tqdm(method_list):
+        os.makedirs(f"images/{method}", exist_ok=True)
+        for seed in seeding_list:
+            os.makedirs(f"images/{method}/{seed}", exist_ok=True)
+            for i in interval:
+
+                fig1, fig2 = run_simulation(method, seed, i)
+                index = np.round(i,2)
+
+                fig1.savefig(f"images/{method}/{seed}/fig1_{index}.png", dpi=fig1.dpi)
+                fig2.savefig(f"images/{method}/{seed}/fig2_{index}.png", dpi=fig2.dpi)
