@@ -123,10 +123,12 @@ def run_simulation(distance_method, mode, epsilon):
         axes[i].hist(df_after[col], bins=20, alpha=0.5, label='After Opinion Dynamics', color='green')
         axes[i].set_title(f'Histogram for {col}')
         axes[i].legend()
+        axes[i].set_xlim(-1, 1)
     plt.suptitle(generate_title(config), fontsize=12)
 
     # Adjust spacing between subplots
     plt.subplots_adjust(hspace=0.4, wspace=0.4)
+
 
     a = plt.gcf()
 
