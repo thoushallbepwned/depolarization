@@ -58,7 +58,7 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
     config.add_model_parameter("gamma_cov", 0.35) # correlation between dimensions
     config.add_model_parameter("distance_method", distance_method) # fraction of minority nodes in the network
     config.add_model_parameter("fixed", True) # distribution opinion parameter
-    config.add_model_parameter("operational_mode", "softmax") # operational parameter
+    config.add_model_parameter("operational_mode", operational_mode) # operational parameter
     model.set_initial_status(config)
 
 
@@ -163,7 +163,7 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
 if __name__ == "__main__":
     interval = np.arange(0, 1.1, 0.5)
 
-    operation_list = ["iterative", "softmax"]
+    operation_list = ["ensemble", "softmax", "sequential"]
     method_list = ["size_cosine", "strict_euclidean", "mean_euclidean", "cosine"]
     seeding_list = ["normal", "polarized", "mixed"]
 
@@ -173,7 +173,7 @@ if __name__ == "__main__":
         for method in tqdm(method_list):
             print(f"Running {method}")
             os.makedirs(f"images/{operation}/{method}", exist_ok=True)
-            for seed in tqdm(seeding_list):
+            for seed in seeding_list:
                 print(f"seeding mode is {seed}")
                 os.makedirs(f"images/{operation}/{method}/{seed}", exist_ok=True)
                 for i in interval:
