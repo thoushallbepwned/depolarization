@@ -163,18 +163,18 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
 if __name__ == "__main__":
     interval = np.arange(0, 1.1, 0.5)
 
-    operation_list = ["ensemble", "softmax", "sequential"]
+    operation_list = ["softmax", "sequential"]
     method_list = ["size_cosine", "strict_euclidean", "mean_euclidean", "cosine"]
     seeding_list = ["normal", "polarized", "mixed"]
 
     for operation in tqdm(operation_list):
-        print(f"Running {operation} simulations")
+        print(f"Running {operation} simulations\n")
         os.makedirs(f"images/{operation}", exist_ok=True)
         for method in tqdm(method_list):
-            print(f"Running {method}")
+            print(f"Running {method}\n")
             os.makedirs(f"images/{operation}/{method}", exist_ok=True)
             for seed in seeding_list:
-                print(f"seeding mode is {seed}")
+                print(f"seeding mode is {seed}\n")
                 os.makedirs(f"images/{operation}/{method}/{seed}", exist_ok=True)
                 for i in interval:
 

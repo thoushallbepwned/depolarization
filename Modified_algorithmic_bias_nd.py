@@ -642,7 +642,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                         difference_array = np.abs(np.array(actual_status[n1]) - np.array(actual_status[n2]))
                         probabilities = softmax(difference_array)
 
-                        chosen_dimension = np.random.choice(self.params['model']['dims'],1, p=probabilities)
+                        chosen_dimension = np.random.choice(self.params['model']['dims'], p=probabilities)
                         #print("difference_array: ", difference_array)
                         #print("Probabilities: ", probabilities)
                         #print("chosen dimension", chosen_dimension)
@@ -724,10 +724,10 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                         #difference_array = np.abs(np.array(actual_status[n1]) - np.array(actual_status[n2]))
                         #probabilities = softmax(difference_array)
 
-                        chosen_dimension = np.random.choice(self.params['model']['dims'], 1)
+                        chosen_dimension = np.random.choice(self.params['model']['dims'])
                         # print("difference_array: ", difference_array)
                         # print("Probabilities: ", probabilities)
-                        # print("chosen dimension", chosen_dimension)
+                        #print("chosen dimension", chosen_dimension)
                         # Adding a little bit of extra noise into the equation
                         if self.params['model']['noise'] > 0:
                             change1 = ((actual_status[n2][chosen_dimension] + 2) - (
