@@ -71,6 +71,7 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
         model_parameters = config.get_model_parameters()
 
         title = (
+            f"mode: {model_parameters['operational_mode']}, "
             f"epsilon: {np.round(model_parameters['epsilon'],2)}, "
             f"mu: {model_parameters['mu']}, "
             f"noise: {model_parameters['noise']}, "
@@ -161,7 +162,7 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
 
 
 if __name__ == "__main__":
-    interval = np.arange(0, 1.1, 0.5)
+    interval = np.arange(0, 1.1, 0.1)
 
     operation_list = ["softmax", "sequential"]
     method_list = ["size_cosine", "strict_euclidean", "mean_euclidean", "cosine"]
