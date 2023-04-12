@@ -28,7 +28,7 @@ warnings.filterwarnings("ignore")
 # parameters governing the graph structure
 "These variables should remain constant for all experimental runs"
 
-def run_simulation(distance_method, mode, epsilon):
+def run_simulation(distance_method, mode, epsilon, operational_mode):
 
     n = 1000 # number of nodes Note: This should be an even number to ensure stability
     m = 8 # number of edges per node
@@ -58,6 +58,7 @@ def run_simulation(distance_method, mode, epsilon):
     config.add_model_parameter("gamma_cov", 0.35) # correlation between dimensions
     config.add_model_parameter("distance_method", distance_method) # fraction of minority nodes in the network
     config.add_model_parameter("fixed", True) # distribution opinion parameter
+    config.add_model_parameter("operational_mode", "softmax") # operational parameter
     model.set_initial_status(config)
 
 
@@ -160,19 +161,25 @@ def run_simulation(distance_method, mode, epsilon):
 
 
 if __name__ == "__main__":
-    interval = np.arange(0, 1.1, 0.1)
+    interval = np.arange(0, 1.1, 0.5)
 
-    method_list = ["size_cosine"]#, "strict_euclidean", "mean_euclidean", "cosine"]
+    operation_list = ["iterative", "softmax"]
+    method_list = ["size_cosine", "strict_euclidean", "mean_euclidean", "cosine"]
     seeding_list = ["normal", "polarized", "mixed"]
 
-    for method in tqdm(method_list):
-        os.makedirs(f"images/{method}", exist_ok=True)
-        for seed in seeding_list:
-            os.makedirs(f"images/{method}/{seed}", exist_ok=True)
-            for i in interval:
+    for operation in tqdm(operation_list):
+        print(f"Running {operation} simulations")
+        os.makedirs(f"images/{operation}", exist_ok=True)
+        for method in tqdm(method_list):
+            print(f"Running {method}")
+            os.makedirs(f"images/{operation}/{method}", exist_ok=True)
+            for seed in tqdm(seeding_list):
+                print(f"seeding mode is {seed}")
+                os.makedirs(f"images/{operation}/{method}/{seed}", exist_ok=True)
+                for i in interval:
 
-                fig1, fig2 = run_simulation(method, seed, i)
-                index = np.round(i,2)
+                    fig1, fig2 = run_simulation(method, seed, i, operation)
+                    index = np.round(i,2)
 
-                fig1.savefig(f"images/{method}/{seed}/fig1_{index}.png", dpi=fig1.dpi)
-                fig2.savefig(f"images/{method}/{seed}/fig2_{index}.png", dpi=fig2.dpi)
+                    fig1.savefig(f"images/{operation}/{method}/{seed}/fig1_{index}.png", dpi=fig1.dpi)
+                    fig2.savefig(f"images/{operation}/{method}/{seed}/fig2_{index}.png", dpi=fig2.dpi)
