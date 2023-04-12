@@ -390,10 +390,11 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         "defining some helper functions"
 
-        def softmax(x):
-            e_x = np.exp(x - np.max(x))
+        def softmax_temperature(x, T):
+            x = np.array(x)
+            x = x / T
+            e_x = np.exp(x - np.max(x))  # Subtracting the maximum value for numerical stability
             return e_x / e_x.sum()
-
 
         actual_status = copy.deepcopy(self.status)
 
@@ -640,7 +641,8 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                         "Creating a difference array between the two nodes and selecting through softmax based on that difference"
                         difference_array = np.abs(np.array(actual_status[n1]) - np.array(actual_status[n2]))
-                        probabilities = softmax(difference_array)
+
+                        probabilities = softmax_temperature(-(difference_array - np.min(difference_array)), 0.5)
 
                         chosen_dimension = np.random.choice(self.params['model']['dims'], p=probabilities)
                         #print("difference_array: ", difference_array)
