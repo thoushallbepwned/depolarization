@@ -21,6 +21,7 @@ import pandas as pd
 import seaborn as sns
 import warnings
 import os
+from polarization_metric import *
 
 warnings.filterwarnings("ignore")
 
@@ -86,7 +87,6 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
     epochs = 16
     if operational_mode == "ensemble":
         epochs = int(epochs/d)
-        print("cropping the epochs to account for ensemble method")
     else:
         epochs = epochs
     #Simulation execution
@@ -120,6 +120,9 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
     df_before = pd.DataFrame(data_1, columns=[f'Dimension {i + 1}' for i in range(d)])
     df_after = pd.DataFrame(data_2, columns=[f'Dimension {i + 1}' for i in range(d)])
 
+    polarization_before = polarization_metric(pd.DataFrame(data_1, columns=[f'Dimension {i + 1}' for i in range(d)]))
+    polarization_after = polarization_metric(pd.DataFrame(data_2, columns=[f'Dimension {i + 1}' for i in range(d)]))
+
 
     # Plot histograms
     # Create subplots
@@ -131,6 +134,8 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
         axes[i].hist(df_before[col], bins=20, alpha=0.5, label='Before Opinion Dynamics', color='blue')
         axes[i].hist(df_after[col], bins=20, alpha=0.5, label='After Opinion Dynamics', color='green')
         axes[i].set_title(f'Histogram for {col}')
+        axes[i].text(0.05, -0.2, f'P before: {polarization_before[i]:.2f}', transform=axes[i].transAxes, fontsize=10)
+        axes[i].text(0.45, -0.2, f'P after: {polarization_after[i]:.2f}', transform=axes[i].transAxes, fontsize=10)
         axes[i].legend()
         axes[i].set_xlim(-1, 1)
     plt.suptitle(generate_title(config), fontsize=12)
@@ -173,7 +178,7 @@ if __name__ == "__main__":
 
     operation_list = ["ensemble", "softmax", "sequential"]
     method_list = ["size_cosine", "strict_euclidean", "mean_euclidean", "cosine"]
-    seeding_list = ["mixed"]#["normal", "polarized", "mixed"]
+    seeding_list = ["mixed", "normal", "polarized", "mixed"]
 
     for operation in tqdm(operation_list):
         print(f"\nRunning {operation} simulations\n")
