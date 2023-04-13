@@ -82,8 +82,15 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
         return title
 
 
+    # Simulation execution
+    epochs = 16
+    if operational_mode == "ensemble":
+        epochs = int(epochs/d)
+        print("cropping the epochs to account for ensemble method")
+    else:
+        epochs = epochs
     #Simulation execution
-    epochs = 15
+
     iterations = model.iteration_bunch(epochs, node_status = True, progress_bar = False)
 
     test_vector = iterations[0]['status']
@@ -95,8 +102,8 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
          control_graph.nodes[nodes]['opinion'] = test_vector[nodes]
 
     x_before =nx.get_node_attributes(control_graph, 'opinion')
-    int = list(x_before.values())
-    data_1 =np.array(int)
+    array_int = list(x_before.values())
+    data_1 =np.array(array_int)
     opinion_vector = iterations[epochs-1]['status']
 
     for nodes in g.nodes:
@@ -107,8 +114,8 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
 
     "Visualization before and after "
     x_after =nx.get_node_attributes(g, 'opinion')
-    int = list(x_after.values())
-    data_2 =np.array(int)
+    array_int_after = list(x_after.values())
+    data_2 =np.array(array_int_after)
 
     df_before = pd.DataFrame(data_1, columns=[f'Dimension {i + 1}' for i in range(d)])
     df_after = pd.DataFrame(data_2, columns=[f'Dimension {i + 1}' for i in range(d)])
@@ -164,12 +171,12 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
 if __name__ == "__main__":
     interval = np.arange(0, 1.1, 0.1)
 
-    operation_list = ["softmax", "sequential"]
+    operation_list = ["ensemble", "softmax", "sequential"]
     method_list = ["size_cosine", "strict_euclidean", "mean_euclidean", "cosine"]
     seeding_list = ["normal", "polarized", "mixed"]
 
     for operation in tqdm(operation_list):
-        print(f"Running {operation} simulations\n")
+        print(f"\nRunning {operation} simulations\n")
         os.makedirs(f"images/{operation}", exist_ok=True)
         for method in tqdm(method_list):
             print(f"Running {method}\n")
