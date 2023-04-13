@@ -173,7 +173,7 @@ if __name__ == "__main__":
 
     operation_list = ["ensemble", "softmax", "sequential"]
     method_list = ["size_cosine", "strict_euclidean", "mean_euclidean", "cosine"]
-    seeding_list = ["normal", "polarized", "mixed"]
+    seeding_list = ["mixed"]#["normal", "polarized", "mixed"]
 
     for operation in tqdm(operation_list):
         print(f"\nRunning {operation} simulations\n")

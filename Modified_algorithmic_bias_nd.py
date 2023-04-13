@@ -241,9 +241,10 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             s = np.zeros((n, d))
             correlation_matrix = np.identity(d) * (1 - gamma_cov) + gamma_cov
 
-            options = ["a", "b"]
+            options = ["a", "b", "a", "b"]
             for i in range(d):
-                choices = random.choices(options, weights=[1, 1], k=1)
+                #choices = random.choices(options, weights=[1, 1], k=1)
+                choices = options[i]
 
                 if choices[0] == "a":
                     #print("going polarized")
