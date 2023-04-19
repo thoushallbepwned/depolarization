@@ -53,7 +53,7 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
     config.add_model_parameter("mu", 0.5) #convergence parameter
     config.add_model_parameter("gamma", 0) #bias parameter
     config.add_model_parameter("mode", mode) #initial opinion distribution
-    config.add_model_parameter("noise", 0) # noise parameter that cannot exceed 10%
+    config.add_model_parameter("noise", 0.05) # noise parameter that cannot exceed 10%
     config.add_model_parameter("minority_fraction", minority_fraction) # minority fraction in the network
     config.add_model_parameter("dims", d) # number of dimensions
     config.add_model_parameter("gamma_cov", 0.35) # correlation between dimensions
@@ -176,23 +176,24 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
 if __name__ == "__main__":
     interval = np.arange(0, 1.1, 0.1)
 
-    operation_list = ["bounded"]#["ensemble", "softmax", "sequential", "bounded"]
-    method_list = ["size_cosine", "cosine"]#, "strict_euclidean", "mean_euclidean", "cosine"]
-    seeding_list = ["mixed", "normal", "polarized"]#, "mixed"]
+    noise = ["noisy"]#, "noiseless"]
+    operation_list = ["bounded"]#["softmax", "sequential", "bounded"]#["ensemble",
+    method_list = ["mean_euclidean", "strict_euclidean", "cosine", "size_cosine"]
+    seeding_list = ["mixed", "normal", "polarized"]
 
     for operation in tqdm(operation_list):
         print(f"\nRunning {operation} simulations\n")
-        os.makedirs(f"images/{operation}", exist_ok=True)
+        os.makedirs(f"images/{noise}/{operation}", exist_ok=True)
         for method in tqdm(method_list):
             print(f"Running {method}\n")
-            os.makedirs(f"images/{operation}/{method}", exist_ok=True)
+            os.makedirs(f"images/{noise}/{operation}/{method}", exist_ok=True)
             for seed in seeding_list:
                 print(f"seeding mode is {seed}\n")
-                os.makedirs(f"images/{operation}/{method}/{seed}", exist_ok=True)
+                os.makedirs(f"images/{noise}/{operation}/{method}/{seed}", exist_ok=True)
                 for i in interval:
 
                     fig1, fig2 = run_simulation(method, seed, i, operation)
                     index = np.round(i,2)
 
-                    fig1.savefig(f"images/{operation}/{method}/{seed}/fig1_{index}.png", dpi=fig1.dpi)
-                    fig2.savefig(f"images/{operation}/{method}/{seed}/fig2_{index}.png", dpi=fig2.dpi)
+                    fig1.savefig(f"images/{noise}/{operation}/{method}/{seed}/fig1_{index}.png", dpi=fig1.dpi)
+                    fig2.savefig(f"images/{noise}/{operation}/{method}/{seed}/fig2_{index}.png", dpi=fig2.dpi)
