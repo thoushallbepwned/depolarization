@@ -176,9 +176,9 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
 if __name__ == "__main__":
     interval = np.arange(0, 1.1, 0.1)
 
-    operation_list = ["ensemble", "softmax", "sequential"]
-    method_list = ["size_cosine", "strict_euclidean", "mean_euclidean", "cosine"]
-    seeding_list = ["mixed", "normal", "polarized", "mixed"]
+    operation_list = ["bounded"]#["ensemble", "softmax", "sequential", "bounded"]
+    method_list = ["size_cosine", "cosine"]#, "strict_euclidean", "mean_euclidean", "cosine"]
+    seeding_list = ["mixed", "normal", "polarized"]#, "mixed"]
 
     for operation in tqdm(operation_list):
         print(f"\nRunning {operation} simulations\n")

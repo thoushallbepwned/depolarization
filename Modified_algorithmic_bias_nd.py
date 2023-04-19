@@ -555,6 +555,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     allowance = False
 
 
+
             if self.params['model']['operational_mode'] == 'ensemble':
                 #print("This means that we are working in iterative mode")
                 if self.params['model']['dims'] > 1:
@@ -679,8 +680,8 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                             actual_status[n2][chosen_dimension] = pos2 + self.params['model']['mu'] * change2
 
                         if len(self.node_data) == 0:
-                            self.sts[n1][chosen_dimension] = actual_status[n1][dim]
-                            self.sts[n2][chosen_dimension] = actual_status[n2][dim]
+                            self.sts[n1][chosen_dimension] = actual_status[n1][chosen_dimension]
+                            self.sts[n2][chosen_dimension] = actual_status[n2][chosen_dimension]
                 else:
                     # print("This mean we are working in unidimensional space")
                     if diff < self.params['model']['epsilon']:
@@ -743,9 +744,9 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                             noise2 = np.random.uniform(low=-1 * change2 * self.params['model']['noise'],
                                                        high=change2 * self.params['model']['noise'])
 
-                            actual_status[n1][dim] = actual_status[n1][dim] + self.params['model'][
+                            actual_status[n1][chosen_dimension] = actual_status[n1][chosen_dimension] + self.params['model'][
                                 'mu'] * change1 + noise1
-                            actual_status[n2][dim] = actual_status[n2][dim] + self.params['model'][
+                            actual_status[n2][chosen_dimension] = actual_status[n2][chosen_dimension] + self.params['model'][
                                 'mu'] * change2 + noise2
 
                         if self.params['model']['noise'] == 0:
@@ -765,8 +766,8 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                             actual_status[n2][chosen_dimension] = pos2 + self.params['model']['mu'] * change2
 
                         if len(self.node_data) == 0:
-                            self.sts[n1][chosen_dimension] = actual_status[n1][dim]
-                            self.sts[n2][chosen_dimension] = actual_status[n2][dim]
+                            self.sts[n1][chosen_dimension] = actual_status[n1][chosen_dimension]
+                            self.sts[n2][chosen_dimension] = actual_status[n2][chosen_dimension]
                 else:
                     #print("This mean we are working in unidimensional space")
                     if diff < self.params['model']['epsilon']:
@@ -801,6 +802,91 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                             self.sts[n1] = actual_status[n1]
                             self.sts[n2] = actual_status[n2]
 
+            if self.params['model']['operational_mode'] == 'bounded':
+                #print("This means that we are working in bounded mode")
+                diff_bounded = self.params['model']['epsilon']
+
+                if self.params['model']['dims'] > 1:
+                    # print("Going into softmax operational mode")
+
+                    if allowance == True:
+                        # print("Allowance is true, we are going to interact")
+
+
+                        for i in range(self.params['model']['dims']):
+                            if np.abs((actual_status[n1][i]+2) - (actual_status[n2][i]+2)) < diff_bounded:
+                                #print("We found a dimension that is close enough to interact on", i)
+
+                                if self.params['model']['noise'] > 0:
+                                    change1 = ((actual_status[n2][i] + 2) - (
+                                            actual_status[n1][i] + 2))
+                                    change2 = ((actual_status[n1][i] + 2) - (
+                                            actual_status[n2][i] + 2))
+
+                                    noise1 = np.random.uniform(low=-1 * change1 * self.params['model']['noise'],
+                                                               high=change1 * self.params['model']['noise'])
+                                    noise2 = np.random.uniform(low=-1 * change2 * self.params['model']['noise'],
+                                                               high=change2 * self.params['model']['noise'])
+
+                                    actual_status[n1][dim] = actual_status[n1][dim] + self.params['model'][
+                                        'mu'] * change1 + noise1
+                                    actual_status[n2][dim] = actual_status[n2][dim] + self.params['model'][
+                                        'mu'] * change2 + noise2
+
+                                if self.params['model']['noise'] == 0:
+                                    # Testing some ways to see if the absolute difference is screwing things up
+                                    change1 = (actual_status[n2][i] + 10) - (
+                                            actual_status[n1][i] + 10)
+                                    change2 = (actual_status[n1][i] + 10) - (
+                                            actual_status[n2][i] + 10)
+                                    pos1 = actual_status[n1][i]
+                                    pos2 = actual_status[n2][i]
+
+                                    #########################################
+                                    # THIS EQUATION IS SUPER IMPORTANT
+
+                                    # if actual_status[n1] > actual_status[n2]:
+                                    actual_status[n1][i] = pos1 + self.params['model']['mu'] * change1
+                                    actual_status[n2][i] = pos2 + self.params['model']['mu'] * change2
+                            else:
+                                continue
+
+                            if len(self.node_data) == 0:
+                                self.sts[n1][i] = actual_status[n1][i]
+                                self.sts[n2][i] = actual_status[n2][i]
+                else:
+                    # print("This mean we are working in unidimensional space")
+                    if diff < self.params['model']['epsilon']:
+                        # Adding a little bit of extra noise into the equation
+                        if self.params['model']['noise'] > 0:
+                            change1 = ((actual_status[n2] + 2) - (actual_status[n1] + 2))
+                            change2 = ((actual_status[n1] + 2) - (actual_status[n2] + 2))
+
+                            noise1 = np.random.uniform(low=-1 * change1 * self.params['model']['noise'],
+                                                       high=change1 * self.params['model']['noise'])
+                            noise2 = np.random.uniform(low=-1 * change2 * self.params['model']['noise'],
+                                                       high=change2 * self.params['model']['noise'])
+
+                            actual_status[n1] = actual_status[n1] + self.params['model']['mu'] * change1 + noise1
+                            actual_status[n2] = actual_status[n2] + self.params['model']['mu'] * change2 + noise2
+
+                        if self.params['model']['noise'] == 0:
+                            # Testing some ways to see if the absolute difference is screwing things up
+                            change1 = (actual_status[n2] + 10) - (actual_status[n1] + 10)
+                            change2 = (actual_status[n1] + 10) - (actual_status[n2] + 10)
+                            pos1 = actual_status[n1]
+                            pos2 = actual_status[n2]
+
+                            #########################################
+                            # THIS EQUATION IS SUPER IMPORTANT
+
+                            # if actual_status[n1] > actual_status[n2]:
+                            actual_status[n1] = pos1 + self.params['model']['mu'] * change1
+                            actual_status[n2] = pos2 + self.params['model']['mu'] * change2
+
+                        if len(self.node_data) == 0:
+                            self.sts[n1] = actual_status[n1]
+                            self.sts[n2] = actual_status[n2]
 
         #print("This is the actual status", actual_status)
         delta = actual_status
