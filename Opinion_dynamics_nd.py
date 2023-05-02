@@ -176,24 +176,25 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
 if __name__ == "__main__":
     interval = np.arange(0, 1.1, 0.1)
 
-    noise = ["noisy"]#, "noiseless"]
-    operation_list = ["bounded"]#["softmax", "sequential", "bounded"]#["ensemble",
+    noise = ["noisy", "noiseless"]
+    operation_list = ["bounded","softmax", "sequential", "ensemble"]
     method_list = ["mean_euclidean", "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed", "normal", "polarized"]
 
-    for operation in tqdm(operation_list):
-        print(f"\nRunning {operation} simulations\n")
-        os.makedirs(f"images/{noise}/{operation}", exist_ok=True)
-        for method in tqdm(method_list):
-            print(f"Running {method}\n")
-            os.makedirs(f"images/{noise}/{operation}/{method}", exist_ok=True)
-            for seed in seeding_list:
-                print(f"seeding mode is {seed}\n")
-                os.makedirs(f"images/{noise}/{operation}/{method}/{seed}", exist_ok=True)
-                for i in interval:
+    for noise_mode in noise:
+        for operation in tqdm(operation_list):
+            print(f"\nRunning {operation} simulations\n")
+            os.makedirs(f"images/{noise_mode}/{operation}", exist_ok=True)
+            for method in tqdm(method_list):
+                print(f"Running {method}\n")
+                os.makedirs(f"images/{noise_mode}/{operation}/{method}", exist_ok=True)
+                for seed in seeding_list:
+                    print(f"seeding mode is {seed}\n")
+                    os.makedirs(f"images/{noise_mode}/{operation}/{method}/{seed}", exist_ok=True)
+                    for i in interval:
 
-                    fig1, fig2 = run_simulation(method, seed, i, operation)
-                    index = np.round(i,2)
+                        fig1, fig2 = run_simulation(method, seed, i, operation)
+                        index = np.round(i,2)
 
-                    fig1.savefig(f"images/{noise}/{operation}/{method}/{seed}/fig1_{index}.png", dpi=fig1.dpi)
-                    fig2.savefig(f"images/{noise}/{operation}/{method}/{seed}/fig2_{index}.png", dpi=fig2.dpi)
+                        fig1.savefig(f"images/{noise_mode}/{operation}/{method}/{seed}/fig1_{index}.png", dpi=fig1.dpi)
+                        fig2.savefig(f"images/{noise_mode}/{operation}/{method}/{seed}/fig2_{index}.png", dpi=fig2.dpi)
