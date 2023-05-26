@@ -1,6 +1,8 @@
 import torch
 torch_version = torch.__version__
 from torch_geometric.datasets import Planetoid
+import matplotlib.pyplot as plt
+import networkx as nx
 
 dataset = Planetoid(root='.', name="Pubmed")
 data = dataset[0]
