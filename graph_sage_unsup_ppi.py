@@ -19,6 +19,7 @@ train_dataset = PPI(path, split='train')
 val_dataset = PPI(path, split='val')
 test_dataset = PPI(path, split='test')
 
+
 # Group all training graphs into a single graph to perform sampling:
 train_data = Batch.from_data_list(train_dataset)
 loader = LinkNeighborLoader(train_data, batch_size=1, shuffle=True,
