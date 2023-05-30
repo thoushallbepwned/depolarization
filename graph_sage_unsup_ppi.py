@@ -15,26 +15,30 @@ from torch_geometric.utils import train_test_split_edges, to_undirected, negativ
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-root_dir = './data'
-dataset_name = 'ego-Facebook'
-
-# load the dataset
-dataset = SNAPDataset(root=root_dir, name=dataset_name)
-
+dataset = SNAPDataset(root='./data', name='ego-facebook')
+print(dataset)
 # load the first graph in the dataset
-data = dataset[0].to(device)
+data = dataset[1].to(device)
+print(data.x)
+#print(data.node_features)
 
 
 # Add self loops and convert to undirected graph
 data.edge_index = to_undirected(data.edge_index)
 
 # create one-hot encoded node features
-data.x = torch.eye(data.num_features, dtype=torch.float).to(device)
+data.x = data.x
 
-print(data.x.shape)
+#print(data.x.shape)
 # Create positive and negative links for training and testing
-data = train_test_split_edges(data)
+transform  = RandomLinkSplit(is_undirected= False)
+train_data, val_data, test_data = transform(data)
+#print(train_data, val_data, test_data)
 
+print(train_data)
+
+print("what is train_data.edge_index?", train_data.edge_index)
+print("what is train_data.num_nodes?", train_data.num_nodes)
 
 
 class GraphSAGE(torch.nn.Module):
@@ -50,9 +54,6 @@ class GraphSAGE(torch.nn.Module):
         x = self.conv2(x, edge_index)
         return x
 
-
-print(data.num_features)
-
 "putting a placeholder"
 
 entry_layer = 347
@@ -60,32 +61,28 @@ model = GraphSAGE(data.num_features, 64).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=0.01)
 
 
-def get_link_labels(pos_edge_index, neg_edge_index):
-    link_labels = torch.cat([torch.ones(pos_edge_index.size(1), ),
-                             torch.zeros(neg_edge_index.size(1), )], dim=0).to(device)
-    return link_labels
+def get_link_labels(edge_label_index, edge_label):
+    return edge_label.to(device)
 
 
-def train():
+def train(data):
     model.train()
 
-    # Negative sampling
-    neg_edge_index = negative_sampling(
-        edge_index=data.train_pos_edge_index,
-        num_nodes=data.num_nodes,
-        num_neg_samples=data.train_pos_edge_index.size(1))
+    # Get positive and negative edge indices
+    pos_edge_index = data.edge_label_index[:, data.edge_label == 1]
+    neg_edge_index = data.edge_label_index[:, data.edge_label == 0]
 
     optimizer.zero_grad()
 
     # Get embeddings for nodes in the training data
-    z = model(data.x, data.train_pos_edge_index)
+    z = model(data.x, data.edge_index)
 
     # Calculate loss
     link_logits = torch.cat(
-        [(z[edge[0]] * z[edge[1]]).sum(dim=-1).unsqueeze(0) for edge in data.train_pos_edge_index.t().tolist()] +
+        [(z[edge[0]] * z[edge[1]]).sum(dim=-1).unsqueeze(0) for edge in pos_edge_index.t().tolist()] +
         [(z[edge[0]] * z[edge[1]]).sum(dim=-1).unsqueeze(0) for edge in neg_edge_index.t().tolist()], dim=0)
 
-    link_labels = get_link_labels(data.train_pos_edge_index, neg_edge_index)
+    link_labels = get_link_labels(data.edge_label_index, data.edge_label)
     loss = F.binary_cross_entropy_with_logits(link_logits, link_labels)
 
     # Calculate accuracy
@@ -99,40 +96,33 @@ def train():
     return loss.item(), accuracy
 
 
-def test():
+
+def test(data):
     model.eval()
-    losses = []
-    accuracies = []
-    for prefix in ["val", "test"]:
-        pos_edge_index = data[f'{prefix}_pos_edge_index']
-        neg_edge_index = data[f'{prefix}_neg_edge_index']
+    pos_edge_index = data.edge_label_index[:, data.edge_label == 1]
+    neg_edge_index = data.edge_label_index[:, data.edge_label == 0]
+    with torch.no_grad():
+        z = model(data.x, data.edge_index)
 
-        with torch.no_grad():
-            # Get embeddings for nodes in the test data
-            z = model(data.x, data.train_pos_edge_index)
+    link_logits = torch.cat(
+        [(z[edge[0]] * z[edge[1]]).sum(dim=-1).unsqueeze(0) for edge in pos_edge_index.t().tolist()] +
+        [(z[edge[0]] * z[edge[1]]).sum(dim=-1).unsqueeze(0) for edge in neg_edge_index.t().tolist()], dim=0)
 
-        # Calculate loss
-        link_logits = torch.cat(
-            [(z[edge[0]] * z[edge[1]]).sum(dim=-1).unsqueeze(0) for edge in pos_edge_index.t().tolist()] +
-            [(z[edge[0]] * z[edge[1]]).sum(dim=-1).unsqueeze(0) for edge in neg_edge_index.t().tolist()], dim=0)
+    link_labels = get_link_labels(data.edge_label_index, data.edge_label)
+    loss = F.binary_cross_entropy_with_logits(link_logits, link_labels)
 
-        link_labels = get_link_labels(pos_edge_index, neg_edge_index)
-        loss = F.binary_cross_entropy_with_logits(link_logits, link_labels)
-        losses.append(loss.item())
+    predictions = (torch.sigmoid(link_logits) > 0.5).long()
+    accuracy = (predictions == link_labels.long()).sum().item() / link_labels.size(0)
 
-        # Calculate accuracy
-        predictions = (torch.sigmoid(link_logits) > 0.5).long()
-        accuracy = (predictions == link_labels.long()).sum().item() / link_labels.size(0)
-        accuracies.append(accuracy)
+    return loss.item(), accuracy
 
-    return losses + accuracies
 
 
 import matplotlib.pyplot as plt
 
 import matplotlib.pyplot as plt
 
-epochs = 100
+epochs = 5000
 record_every = int(epochs / 20)
 
 train_losses = []
@@ -143,19 +133,22 @@ test_losses = []
 test_accuracies = []
 
 # Training loop
+# Training loop
 for epoch in tqdm(range(1, epochs + 1)):
     if epoch % record_every == 0:
-        loss, accuracy = train()
-        train_losses.append(loss)  # Store train loss
-        train_accuracies.append(accuracy)  # Store train accuracy
+        train_loss, train_accuracy = train(train_data)  # Pass training data
+        train_losses.append(train_loss)  # Store train loss
+        train_accuracies.append(train_accuracy)  # Store train accuracy
 
-        val_loss, val_accuracy, test_loss, test_accuracy = test()
+        val_loss, val_accuracy = test(val_data)  # Pass validation data
         val_losses.append(val_loss)  # Store validation loss
         val_accuracies.append(val_accuracy)  # Store validation accuracy
+
+        test_loss, test_accuracy = test(test_data)  # Pass test data
         test_losses.append(test_loss)  # Store test loss
         test_accuracies.append(test_accuracy)  # Store test accuracy
-
-        print(f'Epoch: {epoch:03d}, Loss: {loss:.4f}, Acc: {accuracy:.4f}, Val Loss: {val_loss:.4f}, '
+        print(" ")
+        print(f'Epoch: {epoch:03d}, Loss: {train_loss:.4f}, Acc: {train_accuracy:.4f}, Val Loss: {val_loss:.4f}, '
               f'Val Acc: {val_accuracy:.4f}, Test Loss: {test_loss:.4f}, Test Acc: {test_accuracy:.4f}')
 
 # Plot losses
