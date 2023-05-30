@@ -6,14 +6,16 @@ import networkx as nx
 import torch_geometric.transforms as T
 from torch_geometric.data import DataLoader, Data
 from torch_geometric.nn import global_mean_pool
+import numpy as np
 
-
-dataset = TUDataset(root='/tmp/PROTEINS', name='PROTEINS', transform=T.NormalizeFeatures())
+dataset = TUDataset(root='/tmp/HIGH-SCHOOL', name='highschool_ct2', transform=T.NormalizeFeatures())
 # Split the dataset into train and test sets
-print(len(dataset))
-train_dataset = dataset[:667]  # Use the first 540 graphs for training
-test_dataset = dataset[668:890]   # Use the rest for testing
-val_dataset = dataset[891:1113]   # Use the rest for testing
+length = len(dataset)
+
+
+train_dataset = dataset[:int(length*0.6)]  # Use the first 540 graphs for training
+test_dataset = dataset[int(1+length*0.6):int(1+length*0.8)]   # Use the rest for testing
+val_dataset = dataset[int(1+length*0.8):length]   # Use the rest for testing
 # dataset = Planetoid(root='/tmp/Cora', name='Cora', transform=T.NormalizeFeatures())
 # data=dataset[0]
 # dataset = Planetoid(root='.', name="Pubmed")
