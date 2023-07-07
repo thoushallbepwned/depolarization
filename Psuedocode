@@ -1,0 +1,24 @@
+1. Initialize an Iterative Model with parameters: 'model', 'network', 'initial_status', 'iteration_bunch'
+
+2. Generate Model Status:
+    - Generate the initial status for all nodes in the network.
+
+3. Execute iterations:
+    - Loop through each iteration
+        - Initialize 'actual_status' as a copy of the current status of all nodes
+        - Initialize 'node_status' as an empty dictionary
+        - If iteration number reaches a certain threshold (say N), use Link Prediction:
+            - Break a certain number of random edges within the graph
+            - Use the pretrained link prediction model to create an equal number of new edges
+
+4. Nodes Interaction:
+    - Iterate over all pairs of nodes in the network
+        - Depending on the 'operational_mode' specified in the parameters, perform interaction.
+
+5. Update the node statuses:
+    - Update the statuses based on the interaction.
+
+6. Update Model:
+    - Set the model's status to 'actual_status'
+    - Increase the iteration number
+    - Return a dictionary with the updated status, the iteration number, and empty dictionaries for 'node_count' and 'status_delta'
