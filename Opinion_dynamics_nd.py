@@ -22,6 +22,7 @@ import seaborn as sns
 import warnings
 import os
 from polarization_metric import *
+import pickle
 
 warnings.filterwarnings("ignore")
 
@@ -113,6 +114,9 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
 
 
     "Visualization before and after "
+    print("what exactly is g?", g)
+    print("what is the type", type(g))
+    pickle.dump(g, open(f"final_graph_{method}_{seed}.p", "wb"))
     x_after =nx.get_node_attributes(g, 'opinion')
     array_int_after = list(x_after.values())
     data_2 =np.array(array_int_after)
@@ -176,9 +180,9 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
 if __name__ == "__main__":
     interval = np.arange(0, 1.1, 0.1)
 
-    noise = ["noisy", "noiseless"]
-    operation_list = ["bounded","softmax", "sequential", "ensemble"]
-    method_list = ["mean_euclidean", "strict_euclidean", "cosine", "size_cosine"]
+    noise = ["noisy"]#, "noiseless"]
+    operation_list = ["softmax"]#, "sequential", "ensemble","bounded"]
+    method_list = ["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed", "normal", "polarized"]
 
     for noise_mode in noise:

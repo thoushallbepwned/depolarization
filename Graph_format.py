@@ -10,21 +10,43 @@ from torch_geometric.transforms import RandomLinkSplit
 from tqdm import tqdm
 
 from torch_geometric.datasets import SNAPDataset
-from torch_geometric.utils import train_test_split_edges, to_undirected, negative_sampling
-
+from torch_geometric.utils import train_test_split_edges, to_undirected, negative_sampling, from_networkx
+import pickle
+import networkx as nx
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+
+g = pickle.load(open("final_graph_mean_euclidean_mixed.p", "rb"))
+
+
+#final_opinions = {node: opinion for node, opinion in zip(g.nodes(), opinions)}
+
+opinions = nx.get_node_attributes(g, 'opinion')
+# Convert node attributes to PyTorch tensor
+for node, data in g.nodes(data=True):
+    data['opinion'] = torch.tensor(data['opinion'])
+
+# Convert the graph into PyG Data object
+data_nd = from_networkx(g)
+
+
+print(data_nd)
 dataset = SNAPDataset(root='./data', name='ego-facebook')
 print(dataset)
 # load the first graph in the dataset
-data = dataset[1].to(device)
+#data = dataset[1].to(device)
+
+data = data_nd.to(device)
+data.x = data.opinion
+
+print("what is the data structure", data)
 print(data.x)
 #print(data.node_features)
 
 
 # Add self loops and convert to undirected graph
-data.edge_index = to_undirected(data.edge_index)
+data.edge_index = to_undirected(data.edge_index).to(device)
 
 # create one-hot encoded node features
 data.x = data.x
@@ -41,24 +63,25 @@ print("what is train_data.edge_index?", train_data.edge_index)
 print("what is train_data.num_nodes?", train_data.num_nodes)
 
 
+
 class GraphSAGE(torch.nn.Module):
     def __init__(self, in_channels, out_channels):
         super(GraphSAGE, self).__init__()
-        self.conv1 = SAGEConv(in_channels, 128)
-        self.conv2 = SAGEConv(128, out_channels)
+        self.conv1 = SAGEConv(in_channels, 256)
+        self.conv2 = SAGEConv(256, out_channels)
 
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index)
         x = F.relu(x)
-        x = F.dropout(x, p=0.4, training=self.training)
+        x = F.dropout(x, p=0.5, training=self.training)
         x = self.conv2(x, edge_index)
         return x
 
 "putting a placeholder"
 
 entry_layer = 347
-model = GraphSAGE(data.num_features, 64).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.05, weight_decay=0.005)
+model = GraphSAGE(data.num_features, 32).to(device)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=0.01)
 
 
 def get_link_labels(edge_label_index, edge_label):
@@ -122,7 +145,7 @@ import matplotlib.pyplot as plt
 
 import matplotlib.pyplot as plt
 
-epochs = 10000
+epochs = 5000
 record_every = int(epochs / 20)
 
 train_losses = []
