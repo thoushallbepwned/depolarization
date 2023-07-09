@@ -103,6 +103,7 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
          control_graph.nodes[nodes]['opinion'] = test_vector[nodes]
 
     x_before =nx.get_node_attributes(control_graph, 'opinion')
+    pickle.dump(control_graph, open(f"before_graph_{operation}_{method}_{seed}.p", "wb"))
     array_int = list(x_before.values())
     data_1 =np.array(array_int)
     opinion_vector = iterations[epochs-1]['status']
@@ -114,9 +115,9 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
 
 
     "Visualization before and after "
-    print("what exactly is g?", g)
-    print("what is the type", type(g))
-    pickle.dump(g, open(f"final_graph_{method}_{seed}.p", "wb"))
+    #print("what exactly is g?", g)
+    #print("what is the type", type(g))
+    pickle.dump(g, open(f"final_graph_{operation}_{method}_{seed}.p", "wb"))
     x_after =nx.get_node_attributes(g, 'opinion')
     array_int_after = list(x_after.values())
     data_2 =np.array(array_int_after)

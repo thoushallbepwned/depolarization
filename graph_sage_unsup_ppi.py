@@ -122,7 +122,7 @@ import matplotlib.pyplot as plt
 
 import matplotlib.pyplot as plt
 
-epochs = 10000
+epochs = 5000
 record_every = int(epochs / 20)
 
 train_losses = []

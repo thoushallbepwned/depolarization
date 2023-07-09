@@ -17,8 +17,8 @@ import networkx as nx
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-g = pickle.load(open("final_graph_mean_euclidean_mixed.p", "rb"))
-
+#g = pickle.load(open("final_graph_softmax_mean_euclidean_polarized.p", "rb"))
+g = pickle.load(open("before_graph_softmax_mean_euclidean_mixed.p", "rb"))
 
 #final_opinions = {node: opinion for node, opinion in zip(g.nodes(), opinions)}
 
@@ -67,8 +67,8 @@ print("what is train_data.num_nodes?", train_data.num_nodes)
 class GraphSAGE(torch.nn.Module):
     def __init__(self, in_channels, out_channels):
         super(GraphSAGE, self).__init__()
-        self.conv1 = SAGEConv(in_channels, 256)
-        self.conv2 = SAGEConv(256, out_channels)
+        self.conv1 = SAGEConv(in_channels, 128)
+        self.conv2 = SAGEConv(128, out_channels)
 
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index)
@@ -81,7 +81,7 @@ class GraphSAGE(torch.nn.Module):
 
 entry_layer = 347
 model = GraphSAGE(data.num_features, 32).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.01, weight_decay=0.01)
+optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.01)
 
 
 def get_link_labels(edge_label_index, edge_label):
@@ -145,7 +145,7 @@ import matplotlib.pyplot as plt
 
 import matplotlib.pyplot as plt
 
-epochs = 5000
+epochs = 10000
 record_every = int(epochs / 20)
 
 train_losses = []
