@@ -492,6 +492,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         print("what is the data?", data)
         data.x = data.opinion.to(device)
         data.edge_index = to_undirected(data.edge_index).to(device)
+        print("what is the data edge index?", data.edge_index)
 
         # Generating embeddings with trained model
 
