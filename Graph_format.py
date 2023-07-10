@@ -17,8 +17,9 @@ import networkx as nx
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
+file = "final_graph_softmax_mean_euclidean_mixed.p"
 #g = pickle.load(open("final_graph_softmax_mean_euclidean_polarized.p", "rb"))
-g = pickle.load(open("before_graph_softmax_mean_euclidean_mixed.p", "rb"))
+g = pickle.load(open(file, "rb"))
 
 #final_opinions = {node: opinion for node, opinion in zip(g.nodes(), opinions)}
 
@@ -145,7 +146,7 @@ import matplotlib.pyplot as plt
 
 import matplotlib.pyplot as plt
 
-epochs = 10000
+epochs = 30000
 record_every = int(epochs / 20)
 
 train_losses = []
@@ -173,6 +174,12 @@ for epoch in tqdm(range(1, epochs + 1)):
         print(" ")
         print(f'Epoch: {epoch:03d}, Loss: {train_loss:.4f}, Acc: {train_accuracy:.4f}, Val Loss: {val_loss:.4f}, '
               f'Val Acc: {val_accuracy:.4f}, Test Loss: {test_loss:.4f}, Test Acc: {test_accuracy:.4f}')
+
+
+# saving the model
+
+
+torch.save(model.state_dict(), f"{file}_model.pt")
 
 # Plot losses
 plt.figure(figsize=(12, 5))

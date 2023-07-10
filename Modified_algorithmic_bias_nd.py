@@ -12,6 +12,10 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import copy
 import mpl_toolkits.mplot3d as Axes3D
+import torch
+from torch_geometric.utils import train_test_split_edges, to_undirected, negative_sampling, from_networkx
+from torch_geometric.nn import SAGEConv
+import torch.nn.functional as F
 
 from scipy.spatial.distance import cosine, euclidean
 
@@ -19,6 +23,28 @@ __author__ = ["Alina Sirbu", "Giulio Rossetti", "Valentina Pansanella"]
 __email__ = ["alina.sirbu@unipi.it", "giulio.rossetti@isti.cnr.it", "valentina.pansanella@sns.it"]
 #modified by Paul Verhagen
 
+
+
+"Loading link predictor model here"
+
+class GraphSAGE(torch.nn.Module):
+    def __init__(self, in_channels, out_channels):
+        super(GraphSAGE, self).__init__()
+        self.conv1 = SAGEConv(in_channels, 128)
+        self.conv2 = SAGEConv(128, out_channels)
+
+    def forward(self, x, edge_index):
+        x = self.conv1(x, edge_index)
+        x = F.relu(x)
+        x = F.dropout(x, p=0.5, training=self.training)
+        x = self.conv2(x, edge_index)
+        return x
+
+
+""" Loading the link predictor to prepare for incorporation"""
+
+link_predictor = torch.load("final_graph_softmax_mean_euclidean_mixed.p_model.pt")
+link_predictor.eval()
 
 class AlgorithmicBiasModel_nd(DiffusionModel):
     """
@@ -414,7 +440,41 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         n = self.graph.number_of_nodes()
 
+        "Starting link prediction here"
 
+        #number of links to break
+
+        break_links = 100 #change this later
+
+        #breaking links
+        all_edges = list(self.graph.edges())
+        edges_to_remove = random.sample(all_edges, break_links)
+        self.graph.remove_edges_from(edges_to_remove)
+
+        #adding links
+
+        data = from_networkx(self.graph)
+        data.x = data.opinion
+        data.edge_index = to_undirected(data.edge_index)
+
+        # Generating embeddings with trained model
+
+        with torch.no_grad():
+            embeddings = link_predictor(data.x, data.edge_index)
+
+        #compute link probability scores here
+        scores = link_predictor.compute_scores(embeddings, data.edge_index)
+
+        #selecting top N links
+
+        link_scores = scores.view(-1)
+        top_links = link_scores.topk(break_links, largest=True)
+
+        print("checking what the top links are", top_links)
+
+        for i in range(break_links):
+            src, dest = top_links.indices[i] // data.num_nodes, top_links.indices[i] % data.num_nodes
+            self.graph.add_edge(src.item(), dest.item())
 
         #interact with peers
         for i in range(0, n):
