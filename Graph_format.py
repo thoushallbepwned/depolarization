@@ -82,6 +82,7 @@ class GraphSAGE(torch.nn.Module):
 
 entry_layer = 347
 model = GraphSAGE(data.num_features, 32).to(device)
+print(data.num_features)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.01)
 
 
@@ -146,7 +147,7 @@ import matplotlib.pyplot as plt
 
 import matplotlib.pyplot as plt
 
-epochs = 30000
+epochs = 10000
 record_every = int(epochs / 20)
 
 train_losses = []
@@ -179,7 +180,7 @@ for epoch in tqdm(range(1, epochs + 1)):
 # saving the model
 
 
-torch.save(model.state_dict(), f"{file}_model.pt")
+torch.save(model.state_dict(), f"{file}_model.pth")
 
 # Plot losses
 plt.figure(figsize=(12, 5))

@@ -16,6 +16,8 @@ import torch
 from torch_geometric.utils import train_test_split_edges, to_undirected, negative_sampling, from_networkx
 from torch_geometric.nn import SAGEConv
 import torch.nn.functional as F
+from networkx.drawing.nx_agraph import from_agraph
+from netdispatch import AGraph
 
 from scipy.spatial.distance import cosine, euclidean
 
@@ -41,10 +43,23 @@ class GraphSAGE(torch.nn.Module):
         return x
 
 
-""" Loading the link predictor to prepare for incorporation"""
+    def compute_scores(self, edge_index):
+        # Get the embeddings for the two nodes
+        node1_emb = self.forward(*edge_index[0])
+        node2_emb = self.forward(*edge_index[1])
 
-link_predictor = torch.load("final_graph_softmax_mean_euclidean_mixed.p_model.pt")
-link_predictor.eval()
+        # Calculate the score as the dot product of the two embeddings
+        scores = torch.sum(node1_emb * node2_emb, dim=-1)
+
+        return scores
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+""" Loading the link predictor to prepare for incorporation"""
+model = GraphSAGE(4, 32).to(device)
+model.load_state_dict(torch.load("final_graph_softmax_mean_euclidean_mixed.p_model.pth"))
+model.eval()
+
+link_predictor = model
 
 class AlgorithmicBiasModel_nd(DiffusionModel):
     """
@@ -285,6 +300,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         # set node status
 
         #setting node sequence based on attributes
+        #print("what is the type over here?", type(self.graph))
         array = nx.get_node_attributes(self.graph, 'color')
         sorted_array = sorted(array.items(), key=lambda x: x[1])
         index_list = Extract(sorted_array)
@@ -442,28 +458,48 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         "Starting link prediction here"
 
+
+        print("what is this thing?", type(self.graph))
+        print("Seeing what happens if we print this", self.graph)
+        print("what is this thing?", dir(self.graph))
+        #converting to networkx graph
+        networkx_graph = nx.Graph()
+        for edge in self.graph.edges():
+            networkx_graph.add_edge(*edge)
+        for node in self.graph.nodes():
+            opinion = actual_status[node]
+            #print( opinion)
+            #print(node_attrs)
+            networkx_graph.add_node(node, opinion = opinion)
+
+        print("did this work?", networkx_graph)
+
+
+
         #number of links to break
 
         break_links = 100 #change this later
 
         #breaking links
-        all_edges = list(self.graph.edges())
+        all_edges = list(networkx_graph.edges())
         edges_to_remove = random.sample(all_edges, break_links)
-        self.graph.remove_edges_from(edges_to_remove)
+        networkx_graph.remove_edges_from(edges_to_remove)
+        #self.graph.remove_edges_from(edges_to_remove)
 
         #adding links
 
-        data = from_networkx(self.graph)
-        data.x = data.opinion
-        data.edge_index = to_undirected(data.edge_index)
+        data = from_networkx(networkx_graph)
+        print("what is the data?", data)
+        data.x = data.opinion.to(device)
+        data.edge_index = to_undirected(data.edge_index).to(device)
 
         # Generating embeddings with trained model
 
         with torch.no_grad():
-            embeddings = link_predictor(data.x, data.edge_index)
+       #     embeddings = link_predictor(data.x, data.edge_index)
 
         #compute link probability scores here
-        scores = link_predictor.compute_scores(embeddings, data.edge_index)
+            scores = link_predictor.compute_scores(data.x, data.edge_index)
 
         #selecting top N links
 
@@ -472,10 +508,12 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         print("checking what the top links are", top_links)
 
-        for i in range(break_links):
-            src, dest = top_links.indices[i] // data.num_nodes, top_links.indices[i] % data.num_nodes
-            self.graph.add_edge(src.item(), dest.item())
+        for z in range(break_links):
+            src, dest = top_links.indices[z] // data.num_nodes, top_links.indices[z] % data.num_nodes
+            networkx_graph.add_edge(src.item(), dest.item())
 
+
+        self.graph = nx.to_agraph(networkx_graph)
         #interact with peers
         for i in range(0, n):
 
