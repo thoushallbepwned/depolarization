@@ -20,6 +20,8 @@ val_dataset = dataset[int(1+length*0.8):length]   # Use the rest for testing
 # data=dataset[0]
 # dataset = Planetoid(root='.', name="Pubmed")
 data = dataset[0]
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(device)
 
 train_loader = DataLoader(train_dataset, batch_size=64, shuffle=True)
 test_loader = DataLoader(test_dataset, batch_size=64)

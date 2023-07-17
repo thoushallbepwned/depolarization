@@ -43,10 +43,14 @@ class GraphSAGE(torch.nn.Module):
         return x
 
 
-    def compute_scores(self, edge_index):
+    def compute_scores(self,x, edge_index):
+
+        embeddings = self.forward(x, edge_index)
+
+
         # Get the embeddings for the two nodes
-        node1_emb = self.forward(*edge_index[0])
-        node2_emb = self.forward(*edge_index[1])
+        node1_emb = embeddings[edge_index[0]]
+        node2_emb = embeddings[edge_index[1]]
 
         # Calculate the score as the dot product of the two embeddings
         scores = torch.sum(node1_emb * node2_emb, dim=-1)
@@ -459,11 +463,14 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         "Starting link prediction here"
 
 
-        print("what is this thing?", type(self.graph))
-        print("Seeing what happens if we print this", self.graph)
-        print("what is this thing?", dir(self.graph))
+        #print("what is this thing?", type(self.graph))
+        #print("Seeing what happens if we print this", self.graph)
+        #print("what is this thing?", dir(self.graph))
+
+
+
         #converting to networkx graph
-        networkx_graph = nx.Graph()
+        networkx_graph = self.graph
         for edge in self.graph.edges():
             networkx_graph.add_edge(*edge)
         for node in self.graph.nodes():
@@ -472,7 +479,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             #print(node_attrs)
             networkx_graph.add_node(node, opinion = opinion)
 
-        print("did this work?", networkx_graph)
+        #print("did this work?", networkx_graph)
 
 
 
@@ -489,10 +496,10 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         #adding links
 
         data = from_networkx(networkx_graph)
-        print("what is the data?", data)
+        #print("what is the data?", data)
         data.x = data.opinion.to(device)
         data.edge_index = to_undirected(data.edge_index).to(device)
-        print("what is the data edge index?", data.edge_index)
+        #print("what is the data edge index?", data.edge_index)
 
         # Generating embeddings with trained model
 
@@ -507,14 +514,16 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         link_scores = scores.view(-1)
         top_links = link_scores.topk(break_links, largest=True)
 
-        print("checking what the top links are", top_links)
+        #print("checking what the top links are", top_links)
 
         for z in range(break_links):
             src, dest = top_links.indices[z] // data.num_nodes, top_links.indices[z] % data.num_nodes
             networkx_graph.add_edge(src.item(), dest.item())
 
+        #print(networkx_graph)
+        self.graph = networkx_graph
 
-        self.graph = nx.to_agraph(networkx_graph)
+
         #interact with peers
         for i in range(0, n):
 
