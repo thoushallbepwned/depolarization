@@ -60,7 +60,7 @@ class GraphSAGE(torch.nn.Module):
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 """ Loading the link predictor to prepare for incorporation"""
 model = GraphSAGE(4, 32).to(device)
-model.load_state_dict(torch.load("final_graph_softmax_mean_euclidean_mixed.p_model.pth"))
+model.load_state_dict(torch.load("predictors/final_graph_softmax_mean_euclidean_mixed.p_model.pth"))
 model.eval()
 
 link_predictor = model
@@ -460,68 +460,88 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         n = self.graph.number_of_nodes()
 
-        "Starting link prediction here"
 
 
-        #print("what is this thing?", type(self.graph))
-        #print("Seeing what happens if we print this", self.graph)
-        #print("what is this thing?", dir(self.graph))
+        "Starting the coding block here that allows for link prediction to be on or off"
+
+        if self.params['model']['link_prediction'] == True:
+            #print("what is the original graph?", self.graph)
+            #converting to networkx graph
+            networkx_graph = self.graph.copy()
+            for edge in self.graph.edges():
+                networkx_graph.add_edge(*edge)
+            for node in self.graph.nodes():
+                opinion = actual_status[node]
+                #print( opinion)
+                #print(node_attrs)
+                networkx_graph.add_node(node, opinion = opinion)
+
+            #number of links to break
+            #print("And after conversion?", networkx_graph)
+            break_links = int(0.1*float(self.graph.number_of_edges())) #change this later
+            #print(break_links)
 
 
+            #breaking links
+            all_edges = list(networkx_graph.edges())
+            edges_to_remove = random.sample(all_edges, break_links)
+            networkx_graph.remove_edges_from(edges_to_remove)
 
-        #converting to networkx graph
-        networkx_graph = self.graph
-        for edge in self.graph.edges():
-            networkx_graph.add_edge(*edge)
-        for node in self.graph.nodes():
-            opinion = actual_status[node]
-            #print( opinion)
-            #print(node_attrs)
-            networkx_graph.add_node(node, opinion = opinion)
+            "testing the overlap after breaking edges"
 
-        #print("did this work?", networkx_graph)
+            # edge_overlap = len(set(self.graph.edges()).intersection(networkx_graph.edges())) / len(
+            #     set(self.graph.edges()))
+            # print("Edge overlap after breaking:", edge_overlap)
+            #self.graph.remove_edges_from(edges_to_remove)
 
+            #adding links
 
+            data = from_networkx(networkx_graph)
+            #print("what is the data?", data)
+            data.x = data.opinion.to(device)
+            data.edge_index = to_undirected(data.edge_index).to(device)
+            #print("what is the data edge index?", data.edge_index)
 
-        #number of links to break
+            # Generating embeddings with trained model
 
-        break_links = 100 #change this later
+            with torch.no_grad():
+           #     embeddings = link_predictor(data.x, data.edge_index)
 
-        #breaking links
-        all_edges = list(networkx_graph.edges())
-        edges_to_remove = random.sample(all_edges, break_links)
-        networkx_graph.remove_edges_from(edges_to_remove)
-        #self.graph.remove_edges_from(edges_to_remove)
+            #compute link probability scores here
+                scores = link_predictor.compute_scores(data.x, data.edge_index)
 
-        #adding links
+            #selecting top N links
 
-        data = from_networkx(networkx_graph)
-        #print("what is the data?", data)
-        data.x = data.opinion.to(device)
-        data.edge_index = to_undirected(data.edge_index).to(device)
-        #print("what is the data edge index?", data.edge_index)
+            link_scores = scores.view(-1)
+            sorted_link_scores, indices = torch.sort(link_scores, descending=True)
+            #top_links = link_scores.topk(break_links, largest=True)
+            #print(top_links)
 
-        # Generating embeddings with trained model
+            #print("checking what the top links are", top_links)
+            new_links_added = 0
+            link_index = 0
 
-        with torch.no_grad():
-       #     embeddings = link_predictor(data.x, data.edge_index)
+            while new_links_added < break_links:
+                src, dest = indices[link_index] // data.num_nodes, indices[
+                    link_index] % data.num_nodes
 
-        #compute link probability scores here
-            scores = link_predictor.compute_scores(data.x, data.edge_index)
+                if not networkx_graph.has_edge(src.item(), dest.item()):
+                    networkx_graph.add_edge(src.item(), dest.item())
+                    new_links_added += 1
+                link_index += 1
 
-        #selecting top N links
+            # edge_overlap = len(set(self.graph.edges()).intersection(networkx_graph.edges())) / len(
+            #     set(self.graph.edges()))
+            # print("Edge overlap:", edge_overlap)
 
-        link_scores = scores.view(-1)
-        top_links = link_scores.topk(break_links, largest=True)
+            #print(networkx_graph)
+            self.graph = networkx_graph
+            #print("Completed one loop of link prediction")
 
-        #print("checking what the top links are", top_links)
+            #print(networkx_graph)
 
-        for z in range(break_links):
-            src, dest = top_links.indices[z] // data.num_nodes, top_links.indices[z] % data.num_nodes
-            networkx_graph.add_edge(src.item(), dest.item())
-
-        #print(networkx_graph)
-        self.graph = networkx_graph
+        elif self.params['model']['link_prediction'] == False:
+            self.graph = self.graph
 
 
         #interact with peers

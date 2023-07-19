@@ -62,6 +62,7 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
     config.add_model_parameter("distance_method", distance_method) # fraction of minority nodes in the network
     config.add_model_parameter("fixed", True) # distribution opinion parameter
     config.add_model_parameter("operational_mode", operational_mode) # operational parameter
+    config.add_model_parameter("link_prediction", False) # link prediction parameter
     model.set_initial_status(config)
 
 
@@ -104,7 +105,7 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
          control_graph.nodes[nodes]['opinion'] = test_vector[nodes]
 
     x_before =nx.get_node_attributes(control_graph, 'opinion')
-    pickle.dump(control_graph, open(f"before_graph_{operation}_{method}_{seed}.p", "wb"))
+    pickle.dump(control_graph, open(f"graphs/before_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}.p", "wb"))
     array_int = list(x_before.values())
     data_1 =np.array(array_int)
     opinion_vector = iterations[epochs-1]['status']
@@ -118,7 +119,7 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
     "Visualization before and after "
     #print("what exactly is g?", g)
     #print("what is the type", type(g))
-    pickle.dump(g, open(f"final_graph_{operation}_{method}_{seed}.p", "wb"))
+    pickle.dump(g, open(f"graphs/final_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}.p", "wb"))
     x_after =nx.get_node_attributes(g, 'opinion')
     array_int_after = list(x_after.values())
     data_2 =np.array(array_int_after)
@@ -185,7 +186,7 @@ if __name__ == "__main__":
     noise = ["noisy"]#, "noiseless"]
     operation_list = ["softmax"]#, "sequential", "ensemble","bounded"]
     method_list = ["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
-    seeding_list = ["mixed", "normal", "polarized"]
+    seeding_list = ["mixed"]#, "normal", "polarized"]
 
     for noise_mode in noise:
         for operation in tqdm(operation_list):
