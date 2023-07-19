@@ -33,7 +33,7 @@ warnings.filterwarnings("ignore")
 
 def run_simulation(distance_method, mode, epsilon, operational_mode):
 
-    n = 1000 # number of nodes Note: This should be an even number to ensure stability
+    n = 5000 # number of nodes Note: This should be an even number to ensure stability
     m = 8 # number of edges per node
     p = 0.70 # probability of rewiring each edge
     minority_fraction = 0.5 # fraction of minority nodes in the network

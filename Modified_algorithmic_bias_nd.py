@@ -60,7 +60,7 @@ class GraphSAGE(torch.nn.Module):
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 """ Loading the link predictor to prepare for incorporation"""
 model = GraphSAGE(4, 32).to(device)
-model.load_state_dict(torch.load("predictors/final_graph_softmax_mean_euclidean_mixed.p_model.pth"))
+model.load_state_dict(torch.load("predictors/graphs/final_graph_softmax_mean_euclidean_mixed_1.0.p_model.pth"))
 model.eval()
 
 link_predictor = model
