@@ -33,7 +33,7 @@ warnings.filterwarnings("ignore")
 
 def run_simulation(distance_method, mode, epsilon, operational_mode):
 
-    n = 10000 # number of nodes Note: This should be an even number to ensure stability
+    n = 2000 # number of nodes Note: This should be an even number to ensure stability
     m = 8 # number of edges per node
     p = 0.70 # probability of rewiring each edge
     minority_fraction = 0.5 # fraction of minority nodes in the network
@@ -105,7 +105,7 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
          control_graph.nodes[nodes]['opinion'] = test_vector[nodes]
 
     x_before =nx.get_node_attributes(control_graph, 'opinion')
-    pickle.dump(control_graph, open(f"graphs/before_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}.p", "wb"))
+    pickle.dump(control_graph, open(f"graphs/2k_nodes/before_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}.p", "wb"))
     array_int = list(x_before.values())
     data_1 =np.array(array_int)
     opinion_vector = iterations[epochs-1]['status']
@@ -135,6 +135,19 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
     # Create subplots
     fig, axes = plt.subplots(2, 2, figsize=(10, 8))
     axes = axes.ravel()
+    mean_polarization_before = np.mean(polarization_before)
+    mean_polarization_after = np.mean(polarization_after)
+
+    # Calculate depolarization
+    depolarization = mean_polarization_before - mean_polarization_after
+    polarization_decrease = polarization_before - polarization_after
+    net_depolarization = np.sum(polarization_decrease)
+
+
+    # Calculate maximum decrease
+    max_decrease = np.max(polarization_decrease)
+    max_decrease_dim = np.argmax(polarization_decrease)+1
+
 
     # Plot histograms
     for i, col in enumerate(df_before.columns):
@@ -146,6 +159,12 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
         axes[i].legend()
         axes[i].set_xlim(-1, 1)
     plt.suptitle(generate_title(config), fontsize=12)
+    plt.figtext(0.2, 0.01, f'Depolarization: {depolarization:.2f}', ha="center", fontsize=10,
+                bbox={"facecolor": "orange", "alpha": 0.5, "pad": 5})
+    plt.figtext(0.50, 0.01, f'Net depolarization: {net_depolarization:.2f}', ha="center",
+                fontsize=10, bbox={"facecolor": "lightblue", "alpha": 0.5, "pad": 5})
+    plt.figtext(0.80, 0.01, f'Max Decrease: {max_decrease:.2f} in Dimension: {max_decrease_dim}', ha="center",
+                fontsize=10, bbox={"facecolor": "lightgreen", "alpha": 0.5, "pad": 5})
 
     # Adjust spacing between subplots
     plt.subplots_adjust(hspace=0.4, wspace=0.4)
@@ -181,22 +200,22 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
 
 
 if __name__ == "__main__":
-    interval = np.arange(0, 1.1, 0.1)
+    interval = np.arange(0, 1.1, 0.2)
 
-    noise = ["noisy"]#, "noiseless"]
-    operation_list = ["softmax"]#, "sequential", "ensemble","bounded"]
+    noise = ["noiseless"]
+    operation_list = ["softmax"]#["ensemble"]#["ensemble","bounded"] #["softmax", "sequential",
     method_list = ["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
 
     for noise_mode in noise:
         for operation in tqdm(operation_list):
-            print(f"\nRunning {operation} simulations\n")
+            print(f"\nCurrently operating {operation} simulations\n")
             os.makedirs(f"images/{noise_mode}/{operation}", exist_ok=True)
             for method in tqdm(method_list):
-                print(f"Running {method}\n")
+                print(f"For {operation} mode running the {method} method\n")
                 os.makedirs(f"images/{noise_mode}/{operation}/{method}", exist_ok=True)
                 for seed in seeding_list:
-                    print(f"seeding mode is {seed}\n")
+                    print(f"seeding mode is {seed} for {operation} and {method}\n")
                     os.makedirs(f"images/{noise_mode}/{operation}/{method}/{seed}", exist_ok=True)
                     for i in interval:
 

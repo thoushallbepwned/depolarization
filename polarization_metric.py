@@ -1,5 +1,6 @@
 import numpy as np
-
+from sklearn.mixture import GaussianMixture
+from sklearn.cluster import KMeans
 
 def polarization_metric(df):
     """
@@ -64,8 +65,44 @@ def polarization_metric(df):
 
     polarization[np.isnan(polarization)] = 0
 
+    #adding a penalty term for variance
 
-   #  #np.abs(center_of_gravity[1] - center_of_gravity[0]) / delta_a
+    variance  = np.var(opinion_distribution, axis = 0)
+
+    #accounting for proportionality
+
+    variance_penalty = variance# / np.max(variance)
+
+    #polarization = polarization + variance_penalty
+
+    # Fit a GaussianMixture model to the data
+
+    bic_penalty = np.zeros(d)
+    for dim in range(d):
+        # Reshape the data to fit the GMM
+        dim_data = opinion_distribution[:, dim].reshape(-1, 1)
+
+        # Fit a GaussianMixture model to the data of the current dimension
+        gmm = GaussianMixture(n_components=1)
+        gmm.fit(dim_data)
+
+        # Use the BIC to find the optimal number of components
+        bic = gmm.bic(dim_data)
+
+        # Calculate a penalty term based on the BIC and add it to the array
+        bic_penalty[dim] = bic
+
+    #bic_penalty = bic_penalty / np.max(bic_penalty)
+    #polarization = polarization + bic_penalty
+
+
+    #print("polarization aspect", polarization)
+    #print("variance penalty", variance_penalty)
+    #print("BIC aspect", bic_penalty)
+
+    polarization = (polarization + variance_penalty)/2
+
+    #  #np.abs(center_of_gravity[1] - center_of_gravity[0]) / delta_a
    #  print("distance is:", distance)
    #  print("delta_a is:", delta_a)
    # #Printing results
