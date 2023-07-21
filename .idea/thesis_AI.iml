@@ -5,7 +5,7 @@
       <excludeFolder url="file://$MODULE_DIR$/graph_sage_compilter" />
       <excludeFolder url="file://$MODULE_DIR$/thesis_env" />
     </content>
-    <orderEntry type="jdk" jdkName="Python 3.10 (depolarization)" jdkType="Python SDK" />
+    <orderEntry type="jdk" jdkName="Python 3.10 (thesis_env)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />
   </component>
   <component name="PyDocumentationSettings">

@@ -57,13 +57,6 @@ class GraphSAGE(torch.nn.Module):
 
         return scores
 
-device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-""" Loading the link predictor to prepare for incorporation"""
-model = GraphSAGE(4, 32).to(device)
-model.load_state_dict(torch.load("predictors/graphs/final_graph_softmax_mean_euclidean_mixed_1.0.p_model.pth"))
-model.eval()
-
-link_predictor = model
 
 class AlgorithmicBiasModel_nd(DiffusionModel):
     """
@@ -465,6 +458,15 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         "Starting the coding block here that allows for link prediction to be on or off"
 
         if self.params['model']['link_prediction'] == True:
+
+            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+            """ Loading the link predictor to prepare for incorporation"""
+            model = GraphSAGE(4, 32).to(device)
+            model.load_state_dict(
+                torch.load("predictors/graphs/final_graph_softmax_mean_euclidean_mixed_1.0.p_model.pth"))
+            model.eval()
+
+            link_predictor = model
             #print("what is the original graph?", self.graph)
             #converting to networkx graph
             networkx_graph = self.graph.copy()
