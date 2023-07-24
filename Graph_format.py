@@ -30,8 +30,9 @@ def random_predictor(n_samples):
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
+version = "1000_nodes"
 
-file = "graphs/final_graph_softmax_mean_euclidean_mixed_0.6.p"
+file = f"graphs/{version}/final_graph_softmax_mean_euclidean_mixed_0.6.p"
 #g = pickle.load(open("final_graph_softmax_mean_euclidean_polarized.p", "rb"))
 g = pickle.load(open(file, "rb"))
 
@@ -176,7 +177,7 @@ import matplotlib.pyplot as plt
 
 import matplotlib.pyplot as plt
 
-epochs = 100
+epochs = 200
 record_every = int(epochs / 20)
 
 train_losses = []
@@ -201,9 +202,10 @@ test_f1s = []
 test_aucs = []
 
 for epoch in tqdm(range(1, epochs + 1)):
-    train_loss, train_accuracy, train_precision, train_recall, train_f1, train_auc = train(train_data)
-    if epoch % record_every == 0:
 
+    train_loss, train_accuracy, train_precision, train_recall, train_f1, train_auc = train(train_data)
+
+    if epoch % record_every == 0:
         train_losses.append(train_loss)
         train_accuracies.append(train_accuracy)
         train_precisions.append(train_precision)
@@ -242,7 +244,9 @@ for epoch in tqdm(range(1, epochs + 1)):
               f'Rand Recall: {rand_recall:.4f}, Rand F1: {rand_f1:.4f}, Rand AUC: {rand_auc_roc:.4f}')
 
 # saving the model
-torch.save(model.state_dict(), f"predictors/{file}_model.pth")
+
+name = f"predictor_{version}_model.pth"
+torch.save(model.state_dict(), f"predictors/{name}.pth")
 
 # Plot losses and accuracies
 plt.figure(figsize=(12, 5))

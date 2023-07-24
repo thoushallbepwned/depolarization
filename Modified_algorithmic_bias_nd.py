@@ -463,7 +463,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             """ Loading the link predictor to prepare for incorporation"""
             model = GraphSAGE(4, 32).to(device)
             model.load_state_dict(
-                torch.load("predictors/graphs/final_graph_softmax_mean_euclidean_mixed_1.0.p_model.pth"))
+                torch.load("predictors/predictor_1000_nodes_model.pth.pth"))
             model.eval()
 
             link_predictor = model
