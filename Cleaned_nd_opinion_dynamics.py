@@ -6,7 +6,6 @@ from collections import Counter
 import os
 import pickle
 import warnings
-
 # Import Third Party Libraries
 import matplotlib.pyplot as plt
 import ndlib.models.ModelConfig as mc
@@ -52,18 +51,11 @@ def generate_title(config):
     )
     return title
 
-def run_simulation(distance_method, mode, epsilon, operational_mode):
-
-    # Generating graph
-    g = homophilic_barabasi_albert_graph(n, m, minority_fraction, similitude, p) # generating Graph
-
-    # Model selection
-    model = AlgorithmicBiasModel_nd(g)
+def configure_model(epsilon, mode, minority_fraction, d, operational_mode, distance_method, intervention):
 
 
-    "These variables are editable for each experimental run"
-    # Model Configuration
     config = mc.Configuration()
+
     config.add_model_parameter("epsilon", epsilon) #bounded confidence parameter
     config.add_model_parameter("mu", 0.5) #convergence parameter
     config.add_model_parameter("gamma", 0) #bias parameter
@@ -76,22 +68,17 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
     config.add_model_parameter("fixed", True) # distribution opinion parameter
     config.add_model_parameter("operational_mode", operational_mode) # operational parameter
     config.add_model_parameter("link_prediction", intervention) # link prediction parameter
-    model.set_initial_status(config)
 
+    return config
 
-    # Simulation execution
-    epochs = 16
+def calculate_epochs(operational_mode, d):
     if operational_mode == "ensemble":
-        epochs = int(epochs/d)
+        epochs = int(16/d)
     else:
-        epochs = epochs
-    #Simulation execution
+        epochs = 16
+    return epochs
 
-    iterations = model.iteration_bunch(epochs, node_status=True, progress_bar=False)
-
-    print("What exactly is iterations?", len(iterations))
-
-
+def get_control_graph(iterations, g):
     test_vector = iterations[0]['status']
     control_graph = g.copy()
     #print("Initial distribution", test_vector)
@@ -99,38 +86,39 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
     # assigning opinions to nodes
     for nodes in control_graph.nodes:
          control_graph.nodes[nodes]['opinion'] = test_vector[nodes]
+    return control_graph
 
-    x_before =nx.get_node_attributes(control_graph, 'opinion')
-    pickle.dump(control_graph, open(f"graphs/2k_nodes/before_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}.p", "wb"))
-    array_int = list(x_before.values())
-    data_1 =np.array(array_int)
+def get_final_graph(iterations, g, epochs):
     opinion_vector = iterations[epochs-1]['status']
 
     for nodes in g.nodes:
          g.nodes[nodes]['opinion'] = opinion_vector[nodes]
+    return g
 
-    # visualization
+def get_data_frames(control_graph, g, d):
+    # Extract the opinions before simulation
+    x_before = nx.get_node_attributes(control_graph, 'opinion')
+    array_int = list(x_before.values())
+    data_1 = np.array(array_int)
 
-
-    "Visualization before and after "
-    #print("what exactly is g?", g)
-    #print("what is the type", type(g))
-    pickle.dump(g, open(f"graphs/final_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}.p", "wb"))
-    x_after =nx.get_node_attributes(g, 'opinion')
+    # Extract the opinions after simulation
+    x_after = nx.get_node_attributes(g, 'opinion')
     array_int_after = list(x_after.values())
-    data_2 =np.array(array_int_after)
+    data_2 = np.array(array_int_after)
 
+    # Create the DataFrames
     df_before = pd.DataFrame(data_1, columns=[f'Dimension {i + 1}' for i in range(d)])
     df_after = pd.DataFrame(data_2, columns=[f'Dimension {i + 1}' for i in range(d)])
 
-    polarization_before = polarization_metric(pd.DataFrame(data_1, columns=[f'Dimension {i + 1}' for i in range(d)]))
-    polarization_after = polarization_metric(pd.DataFrame(data_2, columns=[f'Dimension {i + 1}' for i in range(d)]))
+    return df_before, df_after
 
+def get_polarization_metrics(df_before, df_after):
+    # Calculate polarization metrics
+    polarization_before = polarization_metric(df_before)
+    polarization_after = polarization_metric(df_after)
+    return polarization_before, polarization_after
 
-    "testing what this fucking data_1 and data_2 are"
-
-    print(data_1.shape, data_2.shape)
-
+def visualize_histogram(df_before, df_after, polarization_before, polarization_after, config):
     # Plot histograms
     # Create subplots
     fig, axes = plt.subplots(2, 2, figsize=(10, 8))
@@ -142,7 +130,6 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
     depolarization = 100 - (mean_polarization_after/mean_polarization_before)*100
     polarization_decrease = polarization_before - polarization_after
     net_depolarization = np.sum(polarization_decrease)
-
 
     # Calculate maximum decrease
     max_decrease = np.max(polarization_decrease)
@@ -172,31 +159,50 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
 
     a = plt.gcf()
 
-    #trying to plot evolution per dimension
-    fig, axes = plt.subplots(d, 1, figsize=(6, d * 3), sharex=True)
-
-    for d_index in range(d):
-        # Extract the dth opinion for all nodes across iterations
-        opinions_d = [[opinions[d_index] for node, opinions in iteration['status'].items()] for iteration in iterations]
-
-        # Transpose the opinions_d list for easier plotting
-        opinions_d_T = list(zip(*opinions_d))
-
-        # Plot the dth opinion for each node
-        for i, node_opinions in enumerate(opinions_d_T):
-            axes[d_index].plot(node_opinions, color='black', alpha = 0.5)
-
-        axes[d_index].set_ylabel(f'Opinion {d_index}')
-        #axes[d_index].legend()
-        axes[d_index].set_ylim(-1, 1)
+    return a
 
 
-    plt.suptitle(generate_title(config), fontsize=12)
-    plt.xlabel('Iterations')
-    fig.tight_layout()
-    b = plt.gcf()
 
-    return a, b
+"Running the main simulation function"
+def run_simulation(distance_method, mode, epsilon, operational_mode):
+
+    # Generating graph
+    g = homophilic_barabasi_albert_graph(n, m, minority_fraction, similitude, p) # generating Graph
+
+    # Model selection
+    model = AlgorithmicBiasModel_nd(g)
+
+    # Configuring model
+    config = configure_model(epsilon, mode, minority_fraction, d, operational_mode, distance_method, intervention)
+
+    # Setting initial status
+    model.set_initial_status(config)
+
+    # Simulation execution
+    epochs = calculate_epochs(operational_mode, d)
+    iterations = model.iteration_bunch(epochs, node_status=True, progress_bar=False)
+
+    # Control graph
+    control_graph = get_control_graph(iterations, g)
+
+    # Graph after iterations
+    g = get_final_graph(iterations, g, epochs)
+
+    # DataFrames for visualization
+    df_before, df_after = get_data_frames(control_graph, g, d)
+
+    # Polarization metrics
+    polarization_before, polarization_after = get_polarization_metrics(df_before, df_after)
+
+    # Visualization
+    a = visualize_histogram(df_before, df_after, polarization_before, polarization_after, config)
+
+    # Opinion evolution visualization
+    #b = visualize_opinion_evolution(iterations, d, config)
+
+    return a
+
+
 
 
 if __name__ == "__main__":
@@ -211,10 +217,10 @@ if __name__ == "__main__":
 
 
     for noise_mode in noise:
-        for operation in tqdm(operation_list):
+        for operation in tqdm.tqdm(operation_list):
             print(f"\nCurrently operating {operation} simulations\n")
             os.makedirs(f"images/{noise_mode}/{operation}", exist_ok=True)
-            for method in tqdm(method_list):
+            for method in tqdm.tqdm(method_list):
                 print(f"For {operation} mode running the {method} method\n")
                 os.makedirs(f"images/{noise_mode}/{operation}/{method}", exist_ok=True)
                 for seed in seeding_list:
@@ -226,12 +232,9 @@ if __name__ == "__main__":
                         if __name__ == "__main__":
                             # same code as above...
                             for i in interval:
-                                fig1, fig2 = run_simulation(method, seed, i, operation)
+                                fig1 = run_simulation(method, seed, i, operation)
                                 index = np.round(i, 2)
 
                                 fig1.savefig(
                                     f"images/{noise_mode}/{operation}/{method}/{seed}/{intervention}/fig1_{index}.png",
                                     dpi=fig1.dpi)
-                                fig2.savefig(
-                                    f"images/{noise_mode}/{operation}/{method}/{seed}/{intervention}/fig2_{index}.png",
-                                    dpi=fig2.dpi)

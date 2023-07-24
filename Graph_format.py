@@ -13,6 +13,7 @@ from torch_geometric.datasets import SNAPDataset
 from torch_geometric.utils import train_test_split_edges, to_undirected, negative_sampling, from_networkx
 import pickle
 import networkx as nx
+import numpy as np
 
 from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score
 
@@ -24,11 +25,13 @@ def get_metrics(true_labels, pred_labels, probabilities):
 
     return precision, recall, f1, auc_roc
 
+def random_predictor(n_samples):
+    return np.random.choice([0, 1], size=(n_samples,))
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 
-file = "graphs/final_graph_softmax_mean_euclidean_mixed_1.0.p"
+file = "graphs/final_graph_softmax_mean_euclidean_mixed_0.6.p"
 #g = pickle.load(open("final_graph_softmax_mean_euclidean_polarized.p", "rb"))
 g = pickle.load(open(file, "rb"))
 
@@ -91,7 +94,7 @@ class GraphSAGE(torch.nn.Module):
 
 "putting a placeholder"
 
-entry_layer = 347
+#entry_layer = 347
 model = GraphSAGE(data.num_features, 32).to(device)
 print(data.num_features)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0)
@@ -158,7 +161,14 @@ def test(data):
     precision, recall, f1, auc_roc = get_metrics(link_labels.cpu().detach().numpy(), predictions.cpu().detach().numpy(),
                                                  torch.sigmoid(link_logits).cpu().detach().numpy())
 
-    return loss.item(), accuracy, precision, recall, f1, auc_roc
+    #including random predictions
+
+    random_predictions = random_predictor(len(predictions))
+    rand_precision, rand_recall, rand_f1, rand_auc_roc = get_metrics(link_labels.cpu().detach().numpy(),
+                                                                     random_predictions,
+                                                                     np.random.uniform(0, 1, len(predictions)))
+
+    return loss.item(), accuracy, precision, recall, f1, auc_roc, rand_precision, rand_recall, rand_f1, rand_auc_roc
 
 
 
@@ -166,7 +176,7 @@ import matplotlib.pyplot as plt
 
 import matplotlib.pyplot as plt
 
-epochs = 50000
+epochs = 100
 record_every = int(epochs / 20)
 
 train_losses = []
@@ -191,8 +201,9 @@ test_f1s = []
 test_aucs = []
 
 for epoch in tqdm(range(1, epochs + 1)):
+    train_loss, train_accuracy, train_precision, train_recall, train_f1, train_auc = train(train_data)
     if epoch % record_every == 0:
-        train_loss, train_accuracy, train_precision, train_recall, train_f1, train_auc = train(train_data)
+
         train_losses.append(train_loss)
         train_accuracies.append(train_accuracy)
         train_precisions.append(train_precision)
@@ -200,7 +211,8 @@ for epoch in tqdm(range(1, epochs + 1)):
         train_f1s.append(train_f1)
         train_aucs.append(train_auc)
 
-        val_loss, val_accuracy, val_precision, val_recall, val_f1, val_auc = test(val_data)
+        val_loss, val_accuracy, val_precision, val_recall, val_f1, val_auc, \
+            rand_precision_val, rand_recall_val, rand_f1, rand_auc_roc= test(val_data)
         val_losses.append(val_loss)
         val_accuracies.append(val_accuracy)
         val_precisions.append(val_precision)
@@ -208,13 +220,16 @@ for epoch in tqdm(range(1, epochs + 1)):
         val_f1s.append(val_f1)
         val_aucs.append(val_auc)
 
-        test_loss, test_accuracy, test_precision, test_recall, test_f1, test_auc = test(test_data)
+        test_loss, test_accuracy, test_precision, test_recall, test_f1, test_auc, \
+            rand_precision, rand_recall, rand_f1, rand_auc_roc = test(test_data)
         test_losses.append(test_loss)
         test_accuracies.append(test_accuracy)
         test_precisions.append(test_precision)
         test_recalls.append(test_recall)
         test_f1s.append(test_f1)
         test_aucs.append(test_auc)
+
+
 
         print(" ")
         print(f'Epoch: {epoch:03d}, Loss: {train_loss:.4f}, Acc: {train_accuracy:.4f}, Precision: {train_precision:.4f}, '
@@ -223,6 +238,8 @@ for epoch in tqdm(range(1, epochs + 1)):
               f'Val Recall: {val_recall:.4f}, Val F1: {val_f1:.4f}, Val AUC: {val_auc:.4f}')
         print(f'Test Loss: {test_loss:.4f}, Test Acc: {test_accuracy:.4f}, Test Precision: {test_precision:.4f}, '
               f'Test Recall: {test_recall:.4f}, Test F1: {test_f1:.4f}, Test AUC: {test_auc:.4f}')
+        print(f'Rand Precision: {rand_precision:.4f}, '
+              f'Rand Recall: {rand_recall:.4f}, Rand F1: {rand_f1:.4f}, Rand AUC: {rand_auc_roc:.4f}')
 
 # saving the model
 torch.save(model.state_dict(), f"predictors/{file}_model.pth")

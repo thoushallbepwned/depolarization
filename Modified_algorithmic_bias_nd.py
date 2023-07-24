@@ -457,7 +457,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         "Starting the coding block here that allows for link prediction to be on or off"
 
-        if self.params['model']['link_prediction'] == True:
+        if self.params['model']['link_prediction'] == "intervened":
 
             device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
             """ Loading the link predictor to prepare for incorporation"""
@@ -542,7 +542,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
             #print(networkx_graph)
 
-        elif self.params['model']['link_prediction'] == False:
+        elif self.params['model']['link_prediction'] == "natural":
             self.graph = self.graph
 
 
