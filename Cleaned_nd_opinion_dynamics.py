@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore")
 # Network topology
 # parameters governing the graph structure
 "These variables should remain constant for all experimental runs"
-n = 1000  # number of nodes Note: This should be an even number to ensure stability
+n = 10000  # number of nodes Note: This should be an even number to ensure stability
 m = 8  # number of edges per node
 p = 0.70  # probability of rewiring each edge
 minority_fraction = 0.5  # fraction of minority nodes in the network
@@ -215,7 +215,7 @@ if __name__ == "__main__":
     dims = 4
 
     noise = ["noiseless"]
-    operation_list = ["ensemble"]#, "soft_max", "ensemble"] #["ensemble"]#["ensemble","bounded"] #["softmax", "sequential",
+    operation_list = ["softmax"]#, "soft_max", "ensemble"] #["ensemble"]#["ensemble","bounded"] #["softmax", "sequential",
     method_list = ["strict_euclidean", "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
     intervention_status = ["intervened", "natural"]

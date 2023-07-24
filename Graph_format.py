@@ -30,7 +30,7 @@ def random_predictor(n_samples):
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
-version = "1000_nodes"
+version = "10000_nodes"
 
 file = f"graphs/{version}/final_graph_softmax_mean_euclidean_mixed_0.6.p"
 #g = pickle.load(open("final_graph_softmax_mean_euclidean_polarized.p", "rb"))
