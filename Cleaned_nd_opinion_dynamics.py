@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore")
 # Network topology
 # parameters governing the graph structure
 "These variables should remain constant for all experimental runs"
-n = 10000  # number of nodes Note: This should be an even number to ensure stability
+n = 2000  # number of nodes Note: This should be an even number to ensure stability
 m = 8  # number of edges per node
 p = 0.70  # probability of rewiring each edge
 minority_fraction = 0.5  # fraction of minority nodes in the network
@@ -188,8 +188,8 @@ def run_simulation(distance_method, mode, epsilon, operational_mode):
     # Graph after iterations
     g = get_final_graph(iterations, g, epochs)
 
-    pickle.dump(control_graph, open(f"graphs/{n}_nodes/before_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}.p", "wb"))
-    pickle.dump(g, open(f"graphs/{n}_nodes/final_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}.p", "wb"))
+    pickle.dump(control_graph, open(f"graphs/{n}_nodes/before_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
+    pickle.dump(g, open(f"graphs/{n}_nodes/final_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
 
 
 
