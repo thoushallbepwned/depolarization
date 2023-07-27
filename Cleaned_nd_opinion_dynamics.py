@@ -118,107 +118,121 @@ def get_polarization_metrics(df_before, df_after):
     polarization_after = polarization_metric(df_after)
     return polarization_before, polarization_after
 
-def visualize_histogram(df_before, df_after, polarization_before, polarization_after, config):
-    # Plot histograms
-    # Create subplots
-    fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+def visualize_histogram(results):
+    num_interventions = len(results)
+
+    fig, axes = plt.subplots(2, 2, figsize=(10, 8 * num_interventions))
     axes = axes.ravel()
+
+
+    df_before = results["natural"]["df_before"]
+    df_after_natural = results["natural"]["df_after"]
+    df_after_intervened = results["intervened"]["df_after"]
+    polarization_before = results["natural"]["polarization_before"]
+    polarization_after = results["natural"]["polarization_after"]
+    config = results["natural"]["config"]
+
     mean_polarization_before = np.mean(polarization_before)
     mean_polarization_after = np.mean(polarization_after)
 
-    # Calculate depolarization
-    depolarization = 100 - (mean_polarization_after/mean_polarization_before)*100
+    depolarization = 100 - (mean_polarization_after / mean_polarization_before) * 100
     polarization_decrease = polarization_before - polarization_after
     net_depolarization = np.sum(polarization_decrease)
 
-    # Calculate maximum decrease
     max_decrease = np.max(polarization_decrease)
-    max_decrease_dim = np.argmax(polarization_decrease)+1
+    max_decrease_dim = np.argmax(polarization_decrease) + 1
 
+    for j, col in enumerate(df_before.columns):
+        axes[j].hist(df_before[col], bins=20, alpha=0.5, label='Before Opinion Dynamics', color='blue')
+        axes[j].hist(df_after_natural[col], bins=20, alpha=0.5, label='After Opinion Dynamics (Natural)', color='green')
+        axes[j].hist(df_after_intervened[col], bins=20, alpha=0.5, label='After Opinion Dynamics (Intervened)',
+                     color='red')
+        axes[j].set_title(f'Histogram for {col} with')
+        axes[j].text(0.05, -0.2, f'P before: {polarization_before[j]:.2f}', transform=axes[j].transAxes, fontsize=10)
+        axes[j].text(0.45, -0.2, f'P after: {polarization_after[j]:.2f}', transform=axes[j].transAxes, fontsize=10)
+        axes[j].legend()
+        axes[j].set_xlim(-1, 1)
 
-    # Plot histograms
-    for i, col in enumerate(df_before.columns):
-        axes[i].hist(df_before[col], bins=20, alpha=0.5, label='Before Opinion Dynamics', color='blue')
-        axes[i].hist(df_after[col], bins=20, alpha=0.5, label='After Opinion Dynamics', color='green')
-        axes[i].set_title(f'Histogram for {col}')
-        axes[i].text(0.05, -0.2, f'P before: {polarization_before[i]:.2f}', transform=axes[i].transAxes, fontsize=10)
-        axes[i].text(0.45, -0.2, f'P after: {polarization_after[i]:.2f}', transform=axes[i].transAxes, fontsize=10)
-        axes[i].legend()
-        axes[i].set_xlim(-1, 1)
     plt.suptitle(generate_title(config), fontsize=12)
-    plt.figtext(0.2, 0.01, f'Depolarization percentage: {depolarization:.2f}', ha="center", fontsize=10,
-                bbox={"facecolor": "orange", "alpha": 0.5, "pad": 5})
-    plt.figtext(0.50, 0.01, f'Net depolarization: {net_depolarization:.2f}', ha="center",
-                fontsize=10, bbox={"facecolor": "lightblue", "alpha": 0.5, "pad": 5})
-    plt.figtext(0.80, 0.01, f'Max Decrease: {max_decrease:.2f} in Dimension: {max_decrease_dim}', ha="center",
-                fontsize=10, bbox={"facecolor": "lightgreen", "alpha": 0.5, "pad": 5})
+    plt.figtext(0.2, 0.01, f'Depolarization percentage: {depolarization:.2f}', ha="center", fontsize=10, bbox={"facecolor": "orange", "alpha": 0.5, "pad": 5})
+    plt.figtext(0.50, 0.01, f'Net depolarization: {net_depolarization:.2f}', ha="center", fontsize=10, bbox={"facecolor": "lightblue", "alpha": 0.5, "pad": 5})
+    plt.figtext(0.80, 0.01, f'Max Decrease: {max_decrease:.2f} in Dimension: {max_decrease_dim}', ha="center", fontsize=10, bbox={"facecolor": "lightgreen", "alpha": 0.5, "pad": 5})
 
-    # Adjust spacing between subplots
     plt.subplots_adjust(hspace=0.4, wspace=0.4)
 
-
-    a = plt.gcf()
-
-    return a
-
+    return fig
 
 
 "Running the main simulation function"
-def run_simulation(distance_method, mode, epsilon, operational_mode):
+def run_simulation(distance_method, mode, epsilon, operational_mode, intervention_status):
 
-    # Generating graph
-    g = homophilic_barabasi_albert_graph(n, m, minority_fraction, similitude, p) # generating Graph
+    results = {}
 
-    # Model selection
-    model = AlgorithmicBiasModel_nd(g)
-
-    # Configuring model
-    config = configure_model(epsilon, mode, minority_fraction, d, operational_mode, distance_method, intervention)
-
-    # Setting initial status
-    model.set_initial_status(config)
-
-    # Simulation execution
-    epochs = calculate_epochs(operational_mode, d)
-    iterations = model.iteration_bunch(epochs, node_status=True, progress_bar=False)
-
-    # Control graph
-    control_graph = get_control_graph(iterations, g)
-
-    # Graph after iterations
-    g = get_final_graph(iterations, g, epochs)
-
-    pickle.dump(control_graph, open(f"graphs/{n}_nodes/before_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
-    pickle.dump(g, open(f"graphs/{n}_nodes/final_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
+    for intervention in intervention_status:
 
 
+        # Generating graph
+        g = homophilic_barabasi_albert_graph(n, m, minority_fraction, similitude, p) # generating Graph
 
-    # DataFrames for visualization
-    df_before, df_after = get_data_frames(control_graph, g, d)
+        # Model selection
+        model = AlgorithmicBiasModel_nd(g)
 
-    # Polarization metrics
-    polarization_before, polarization_after = get_polarization_metrics(df_before, df_after)
+        # Configuring model
+        config = configure_model(epsilon, mode, minority_fraction, d, operational_mode, distance_method, intervention)
 
-    # Visualization
-    a = visualize_histogram(df_before, df_after, polarization_before, polarization_after, config)
+        # Setting initial status
+        model.set_initial_status(config)
 
-    # Opinion evolution visualization
-    #b = visualize_opinion_evolution(iterations, d, config)
+        # Simulation execution
+        epochs = calculate_epochs(operational_mode, d)
+        iterations = model.iteration_bunch(epochs, node_status=True, progress_bar=False)
 
-    return a
+        # Control graph
+        control_graph = get_control_graph(iterations, g)
+
+        # Graph after iterations
+        g = get_final_graph(iterations, g, epochs)
+
+        pickle.dump(control_graph, open(f"graphs/{n}_nodes/before_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
+        pickle.dump(g, open(f"graphs/{n}_nodes/final_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
+
+
+
+
+
+        # # DataFrames for visualization
+        df_before, df_after = get_data_frames(control_graph, g, d)
+
+        # Polarization metrics
+        polarization_before, polarization_after = get_polarization_metrics(df_before, df_after)
+
+
+        # Instead of creating the figure, store the results
+        results[intervention] = {
+            "df_before": df_before,
+            "df_after": df_after,
+            "polarization_before": polarization_before,
+            "polarization_after": polarization_after,
+            "config": config
+        }
+
+    print(results)
+    print(results.keys())
+
+    return results
 
 
 
 
 if __name__ == "__main__":
-    interval = np.arange(0, 1.1, 0.2)
+    interval = np.arange(0, 1.1, 0.5)
     dims = 4
 
-    noise = ["noisy","noiseless"]
-    operation_list = ["softmax", "sequential", "ensemble", "bounded"]
-    method_list = ["mean_euclidean", "strict_euclidean", "cosine", "size_cosine"]
+    noise = ["noisy"]#,"noiseless"]
+    operation_list = ["softmax"]# "sequential", "ensemble", "bounded"]
+    method_list = ["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
-    intervention_status = ["natural"] #"intervened"
+    intervention_status = ["natural", "intervened"]
 
 
     for noise_mode in noise:
@@ -231,15 +245,15 @@ if __name__ == "__main__":
                 for seed in seeding_list:
                     print(f"seeding mode is {seed} for {operation} and {method}\n")
                     os.makedirs(f"images/{noise_mode}/{operation}/{method}/{seed}", exist_ok=True)
-                    for intervention in intervention_status:
-                        print(f"The current intervention status is {intervention}\n")
-                        os.makedirs(f"images/{noise_mode}/{operation}/{method}/{seed}/{intervention}", exist_ok=True)
-                        if __name__ == "__main__":
-                            # same code as above...
-                            for i in interval:
-                                fig1 = run_simulation(method, seed, i, operation)
-                                index = np.round(i, 2)
 
-                                fig1.savefig(
-                                    f"images/{noise_mode}/{operation}/{method}/{seed}/{intervention}/fig1_{index}.png",
-                                    dpi=fig1.dpi)
+                    if __name__ == "__main__":
+                        # same code as above...
+                        for i in interval:
+
+                            results = run_simulation(method, seed, i, operation, intervention_status)
+                            fig = visualize_histogram(results)
+                            index = np.round(i, 2)
+
+                            fig.savefig(
+                                f"images/{noise_mode}/{operation}/{method}/{seed}/fig1_{index}.png",
+                                dpi=fig.dpi)
