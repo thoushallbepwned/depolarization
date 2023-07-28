@@ -21,13 +21,9 @@ from netdispatch import AGraph
 
 from scipy.spatial.distance import cosine, euclidean
 
-__author__ = ["Alina Sirbu", "Giulio Rossetti", "Valentina Pansanella"]
-__email__ = ["alina.sirbu@unipi.it", "giulio.rossetti@isti.cnr.it", "valentina.pansanella@sns.it"]
+
 #modified by Paul Verhagen
 
-
-
-"Loading link predictor model here"
 
 class GraphSAGE(torch.nn.Module):
     def __init__(self, in_channels, out_channels):
@@ -57,6 +53,14 @@ class GraphSAGE(torch.nn.Module):
 
         return scores
 
+
+"Loading link predictor model here"
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+""" Loading the link predictor to prepare for incorporation"""
+model = GraphSAGE(4, 32).to(device)
+model.load_state_dict(
+    torch.load("predictors/predictor_2000_nodes_ensemble_mean_model_0.6.pth"))
+model.eval()
 
 class AlgorithmicBiasModel_nd(DiffusionModel):
     """
@@ -306,60 +310,60 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             #print("running in noiseless mode")
         #else:
             #print("running in noisy mode")
+        if self.actual_iteration == 0:
+            if self.params['model']['mode'] == 'mixed':
+                print("How often are we entering this per iteration?", self.actual_iteration)
+                s = mixed_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'], self.params['model']['dims'], self.params['model']['gamma_cov'])
+                sorted_dist = np.sort(s, axis = 0)
+                i = 0
+                for node in index_list:
+                    entry = sorted_dist[i].flatten()
+                    if self.params['model']['dims'] == 1:
 
-        if self.params['model']['mode'] == 'mixed':
-            #print("set to mixed mode")
-            s = mixed_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'], self.params['model']['dims'], self.params['model']['gamma_cov'])
-            sorted_dist = np.sort(s, axis = 0)
-            i = 0
-            for node in index_list:
-                entry = sorted_dist[i].flatten()
-                if self.params['model']['dims'] == 1:
+                        self.status[node] = float(entry)
+                    else:
+                        self.status[node] = entry.tolist()
+                    #print(type(entry))
+                    i += 1
+                self.initial_status = self.status.copy()
 
-                    self.status[node] = float(entry)
-                else:
-                    self.status[node] = entry.tolist()
-                #print(type(entry))
-                i += 1
-            self.initial_status = self.status.copy()
+            if self.params['model']['mode'] == 'normal':
+                #print("set to normal mode")
+                s = normal_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['dims'], self.params['model']['gamma_cov'])
+                #print("this is the shape of s", s, s.shape)
 
-        if self.params['model']['mode'] == 'normal':
-            #print("set to normal mode")
-            s = normal_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['dims'], self.params['model']['gamma_cov'])
-            #print("this is the shape of s", s, s.shape)
+                sorted_dist = np.sort(s, axis = 0)
+                i = 0
+                for node in index_list:
+                    entry = sorted_dist[i].flatten()
+                    if self.params['model']['dims'] == 1:
 
-            sorted_dist = np.sort(s, axis = 0)
-            i = 0
-            for node in index_list:
-                entry = sorted_dist[i].flatten()
-                if self.params['model']['dims'] == 1:
+                        self.status[node] = float(entry)
+                    else:
+                        self.status[node] = entry.tolist()
+                    #print(type(entry))
+                    i += 1
 
-                    self.status[node] = float(entry)
-                else:
-                    self.status[node] = entry.tolist()
-                #print(type(entry))
-                i += 1
+                self.initial_status = self.status.copy()
 
-            self.initial_status = self.status.copy()
+            if self.params['model']['mode'] == 'polarized':
+                #print("set to polarized mode")
 
-        if self.params['model']['mode'] == 'polarized':
-            #print("set to polarized mode")
+                dist = polarized_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'],self.params['model']['dims'], self.params['model']['gamma_cov'])
+                #dist = [(2*x) -1 for x in dist]
+                sorted_dist = np.sort(dist, axis = 0)
+                #sorted_dist_round = np.round(sorted_dist)
+                i = 0
+                for node in index_list:
+                    entry = sorted_dist[i].flatten()
+                    if self.params['model']['dims'] == 1:
 
-            dist = polarized_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'],self.params['model']['dims'], self.params['model']['gamma_cov'])
-            #dist = [(2*x) -1 for x in dist]
-            sorted_dist = np.sort(dist, axis = 0)
-            #sorted_dist_round = np.round(sorted_dist)
-            i = 0
-            for node in index_list:
-                entry = sorted_dist[i].flatten()
-                if self.params['model']['dims'] == 1:
+                        self.status[node] = float(entry)
+                    else:
+                        self.status[node] = entry.tolist()
+                    i += 1
 
-                    self.status[node] = float(entry)
-                else:
-                    self.status[node] = entry.tolist()
-                i += 1
-
-            self.initial_status = self.status.copy()
+                self.initial_status = self.status.copy()
 
         ### Initialization numpy representation
 
@@ -458,95 +462,112 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         "Starting the coding block here that allows for link prediction to be on or off"
 
         if self.params['model']['link_prediction'] == "intervened":
+            if self.actual_iteration % 2 == 0:
 
-            device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-            """ Loading the link predictor to prepare for incorporation"""
-            model = GraphSAGE(4, 32).to(device)
-            model.load_state_dict(
-                torch.load("predictors/predictor_1000_nodes_model.pth.pth"))
-            model.eval()
+                #print(f"We are now at intervention iteration {self.actual_iteration}")
 
-            link_predictor = model
-            #print("what is the original graph?", self.graph)
-            #converting to networkx graph
-            networkx_graph = self.graph.copy()
-            for edge in self.graph.edges():
-                networkx_graph.add_edge(*edge)
-            for node in self.graph.nodes():
-                opinion = actual_status[node]
-                #print( opinion)
-                #print(node_attrs)
-                networkx_graph.add_node(node, opinion = opinion)
+                link_predictor = model
+                #copy.deepcopy(self.status)
+                networkx_graph = copy.deepcopy(self.graph)
 
-            #number of links to break
-            #print("And after conversion?", networkx_graph)
-            break_links = int(0.1*float(self.graph.number_of_edges())) #change this later
-            #print(break_links)
+                for edge in self.graph.edges():
+                    networkx_graph.add_edge(*edge)
+                for node in self.graph.nodes():
+                    opinion = actual_status[node]
+                    networkx_graph.add_node(node, opinion = opinion)
+
+                edge_overlap = len(set(self.graph.edges()).intersection(networkx_graph.edges())) / len(
+                    set(self.graph.edges()))
+                print("Edge overlap before link prediction:", edge_overlap)
+
+                #number of links to break
+                break_links = int(0.1*float(networkx_graph.number_of_edges())) #change this later
+
+                #Converting to Pytorch Geometric format
+                data = from_networkx(networkx_graph)
 
 
-            #breaking links
-            all_edges = list(networkx_graph.edges())
-            edges_to_remove = random.sample(all_edges, break_links)
-            networkx_graph.remove_edges_from(edges_to_remove)
 
-            "testing the overlap after breaking edges"
 
-            # edge_overlap = len(set(self.graph.edges()).intersection(networkx_graph.edges())) / len(
-            #     set(self.graph.edges()))
-            # print("Edge overlap after breaking:", edge_overlap)
-            #self.graph.remove_edges_from(edges_to_remove)
+                data.x = data.opinion.to(device)
+                #data.edge_index = to_undirected(data.edge_index).to(device)
 
-            #adding links
+                #breaking links
+                all_edges = list(networkx_graph.edges())
+                edges_to_remove = random.sample(all_edges, break_links)
+                print("What is the number of edges to remove", len(edges_to_remove))
+                networkx_graph.remove_edges_from(edges_to_remove)
 
-            data = from_networkx(networkx_graph)
-            #print("what is the data?", data)
-            data.x = data.opinion.to(device)
-            data.edge_index = to_undirected(data.edge_index).to(device)
-            #print("what is the data edge index?", data.edge_index)
+                # taking the complement of G
+                graph_inv = nx.complement(networkx_graph)
 
-            # Generating embeddings with trained model
+                data_inv = from_networkx(graph_inv)
 
-            with torch.no_grad():
-           #     embeddings = link_predictor(data.x, data.edge_index)
+                #print("What is g", networkx_graph.number_of_nodes(), networkx_graph.number_of_edges())
+                #print("What is inv_g", graph_inv.number_of_nodes(), graph_inv.number_of_edges())
 
-            #compute link probability scores here
-                scores = link_predictor.compute_scores(data.x, data.edge_index)
 
-            #selecting top N links
+                data_inv.edge_index = to_undirected(data_inv.edge_index).to(device)
 
-            link_scores = scores.view(-1)
-            sorted_link_scores, indices = torch.sort(link_scores, descending=True)
-            #top_links = link_scores.topk(break_links, largest=True)
-            #print(top_links)
+                #print("What is the inverted adjacency matrix", data_inv.edge_index.shape)
+                "testing the overlap after breaking edges"
 
-            #print("checking what the top links are", top_links)
-            new_links_added = 0
-            link_index = 0
+                # Generating embeddings with trained model
 
-            while new_links_added < break_links:
-                src, dest = indices[link_index] // data.num_nodes, indices[
-                    link_index] % data.num_nodes
+                with torch.no_grad():
 
-                if not networkx_graph.has_edge(src.item(), dest.item()):
-                    networkx_graph.add_edge(src.item(), dest.item())
-                    new_links_added += 1
-                link_index += 1
+                    #compute link probability scores here
+                    scores = link_predictor.compute_scores(data.x, data_inv.edge_index)
 
-            # edge_overlap = len(set(self.graph.edges()).intersection(networkx_graph.edges())) / len(
-            #     set(self.graph.edges()))
-            # print("Edge overlap:", edge_overlap)
+                #selecting top N links
 
-            #print(networkx_graph)
-            self.graph = networkx_graph
+                link_scores = scores.view(-1)
+                sorted_link_scores, indices = torch.sort(link_scores, descending=True)
+
+
+                #print("these are the descending link scores", sorted_link_scores.shape)
+
+
+
+                new_links_added = 0
+                link_index = 0
+
+                # potential_new_edges = [(i, j) for i in range(data.num_nodes) for j in range(i + 1, data.num_nodes)
+                #                        if not networkx_graph.has_edge(i, j)]
+                #
+                # edges_to_add = random.sample(potential_new_edges, break_links)
+                # networkx_graph.add_edges_from(edges_to_add)
+
+                while new_links_added < 1:
+                    src, dest = indices[link_index] // data.num_nodes, indices[
+                        link_index] % data.num_nodes
+                    #print("this is src", src)
+                    #print("this is dest", dest)
+
+                    if not networkx_graph.has_edge(src.item(), dest.item()):
+                        networkx_graph.add_edge(src.item(), dest.item())
+                        new_links_added += 1
+                    link_index += 1
+
+                edge_overlap = len(set(self.graph.edges()).intersection(networkx_graph.edges())) / len(
+                     set(self.graph.edges()))
+                print("Edge overlap after link prediction:", edge_overlap, "number of edges", networkx_graph.number_of_edges())
+
+                #print(networkx_graph)
+                self.graph = networkx_graph.copy()
+
+                test_graph = self.graph.copy()
             #print("Completed one loop of link prediction")
 
             #print(networkx_graph)
 
         elif self.params['model']['link_prediction'] == "natural":
-            self.graph = self.graph
+            #print(f"We are entering natural loop for iteration {self.actual_iteration}")
+            pass
 
 
         #interact with peers
+        #print(f"how often are we entering this, checking variables {self.actual_iteration} and {self.params['model']['link_prediction']} and {self.params['model']['epsilon']}")
         for i in range(0, n):
 
             # Selecting a random node
@@ -636,7 +657,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                     diff = np.dot(actual_status[n1], actual_status[n2])/ (np.linalg.norm(actual_status[n1]) * np.linalg.norm(actual_status[n2]))
                     #print(diff)
-                    
+
 
             "Setting 4: Size cosine distance"
 
@@ -1037,6 +1058,9 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         self.status = actual_status
         self.actual_iteration += 1
+        #self.graph = networkx_graph
+
+        print("Reached end of iteration", self.actual_iteration)
 
         if node_status:
             #print("what is the iteration number", self.actual_iteration)
@@ -1047,36 +1071,3 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             return {"iteration": self.actual_iteration - 1, "status": {},
                     "node_count": node_count.copy(), "status_delta": status_delta.copy()}
 
-
-
-        #print("This is th
-    # def steady_state(self, max_iterations=100000, nsteady=1000, sensibility=0.00001, node_status=True,
-    #                  progress_bar=True):
-    #     """
-    #     Execute a bunch of model iterations
-    #     :param max_iterations: the maximum number of iterations to execute
-    #     :param nsteady: number of required stable states
-    #     :param sensibility: sensibility check for a steady state
-    #     :param node_status: if the incremental node status has to be returned.
-    #     :param progress_bar: whether to display a progress bar, default False
-    #     :return: a list containing for each iteration a dictionary {"iteration": iteration_id, "status": dictionary_node_to_status}
-    #     """
-    #     system_status = []
-    #     steady_it = 0
-    #     for it in tqdm.tqdm(range(0, max_iterations), disable=not progress_bar):
-    #         its = self.iteration(node_status)
-    #
-    #         if it > 0:
-    #             old = np.array(list(system_status[-1]['status'].values()))
-    #             actual = np.array(list(its['status'].values()))
-    #             res = np.abs(old - actual)
-    #             if np.all((res < sensibility)):
-    #                 steady_it += 1
-    #             else:
-    #                 steady_it = 0
-    #
-    #         system_status.append(its)
-    #         if steady_it == nsteady:
-    #             return system_status[:-nsteady]
-
-       # return system_status

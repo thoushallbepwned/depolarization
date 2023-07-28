@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore")
 # Network topology
 # parameters governing the graph structure
 "These variables should remain constant for all experimental runs"
-n = 2000  # number of nodes Note: This should be an even number to ensure stability
+n = 1000  # number of nodes Note: This should be an even number to ensure stability
 m = 8  # number of edges per node
 p = 0.70  # probability of rewiring each edge
 minority_fraction = 0.5  # fraction of minority nodes in the network
@@ -73,9 +73,9 @@ def configure_model(epsilon, mode, minority_fraction, d, operational_mode, dista
 
 def calculate_epochs(operational_mode, d):
     if operational_mode == "ensemble":
-        epochs = int(16/d)
+        epochs = int(4/d)
     else:
-        epochs = 16
+        epochs = 4
     return epochs
 
 def get_control_graph(iterations, g):
@@ -118,6 +118,160 @@ def get_polarization_metrics(df_before, df_after):
     polarization_after = polarization_metric(df_after)
     return polarization_before, polarization_after
 
+
+def visualize_line_plot(metrics_results):
+    metric_names = ['mean_polarization_before', 'mean_polarization_after', 'depolarization', 'net_depolarization']
+
+    #print("this is metric_results", metrics_results)
+
+    fig, axs = plt.subplots(2, figsize=(10, 6 * 2))  # Set the number of plots to 2 because we have 2 metrics to plot
+
+    metrics_data = {
+        'depolarization': [],
+        'net_depolarization': []
+    }
+
+    for intervention, results in metrics_results.items():
+        epsilon_values = []  # Create a list to hold all epsilon values
+        depolarizations = []
+        net_depolarizations = []
+
+        for i, result in enumerate(results):
+            epsilon, metrics_array = result
+            epsilon_values.append(epsilon)  # Store this epsilon value
+
+            if i == 0:  # initial state, 'polarization_before'
+                polarization_before = metrics_array
+                mean_polarization_before = np.mean(polarization_before)
+            else:  # 'polarization_after'
+                polarization_after = metrics_array
+                mean_polarization_after = np.mean(polarization_after)
+
+                # calculate 'depolarization' and 'net_depolarization'
+                depolarization = 100 - (mean_polarization_after / mean_polarization_before) * 100
+                polarization_decrease = polarization_before - polarization_after
+                net_depolarization = np.sum(polarization_decrease)
+
+                depolarizations.append(depolarization)
+                net_depolarizations.append(net_depolarization)
+
+        # Store the data for later plotting
+        metrics_data['depolarization'].append((epsilon_values[1:], depolarizations, intervention))
+        metrics_data['net_depolarization'].append((epsilon_values[1:], net_depolarizations, intervention))
+
+    # Now plot 'depolarization' and 'net_depolarization' for each intervention method on separate plots
+    for ax, (metric_name, data) in zip(axs, metrics_data.items()):
+        for epsilon_values, metric_values, intervention in data:
+            ax.plot(epsilon_values, metric_values, label=intervention)
+        ax.set_xlabel('Epsilon')
+        ax.set_ylabel(metric_name)
+        ax.legend()
+
+    plt.show()
+
+    return fig
+# def visualize_line_plot(metrics_results):
+#     metric_names = ['mean_polarization_before', 'mean_polarization_after', 'depolarization', 'net_depolarization']
+#
+#     #print("this is metric_results", metrics_results)
+#
+#     fig, axs = plt.subplots(len(metrics_results), figsize=(10, 6 * len(metrics_results)))
+#     if len(metrics_results) == 1:
+#         axs = [axs]
+#
+#     for ax, (intervention, results) in zip(axs, metrics_results.items()):
+#         epsilon_values = []  # Create a list to hold all epsilon values
+#         depolarizations = []
+#         net_depolarizations = []
+#
+#         for i, result in enumerate(results):
+#             epsilon, metrics_array = result
+#             epsilon_values.append(epsilon)  # Store this epsilon value
+#
+#             if i == 0:  # initial state, 'polarization_before'
+#                 polarization_before = metrics_array
+#                 mean_polarization_before = np.mean(polarization_before)
+#             else:  # 'polarization_after'
+#                 polarization_after = metrics_array
+#                 mean_polarization_after = np.mean(polarization_after)
+#
+#                 # calculate 'depolarization' and 'net_depolarization'
+#                 depolarization = 100 - (mean_polarization_after / mean_polarization_before)*100
+#                 polarization_decrease = polarization_before - polarization_after
+#                 net_depolarization = np.sum(polarization_decrease)*100
+#
+#                 depolarizations.append(depolarization)
+#                 net_depolarizations.append(net_depolarization)
+#
+#         # Now plot 'depolarization' and 'net_depolarization' as separate lines
+#         ax.plot(epsilon_values[1:], depolarizations,
+#                 label=f'{intervention}_{metric_names[2]}')  # Skip the first epsilon
+#         ax.plot(epsilon_values[1:], net_depolarizations,
+#                 label=f'{intervention}_{metric_names[3]}')  # Skip the first epsilon
+#         ax.set_xlabel('Epsilon')
+#         ax.set_ylabel(intervention)
+#         ax.legend()
+#
+#     plt.show()
+#
+#     return fig
+
+# def visualize_line_plot(metrics_results):
+#
+#     print("this is metric_results", metrics_results)
+#
+#     fig, axs = plt.subplots(len(metrics_results), figsize=(10, 6 * len(metrics_results)))
+#     if len(metrics_results) == 1:
+#         axs = [axs]
+#
+#     for ax, (intervention, results) in zip(axs, metrics_results.items()):
+#         metrics_arrays = [[], [], [], []]  # Create a list of lists to hold each metric's values
+#         epsilon_values = []  # Create a list to hold all epsilon values
+#         for result in results:
+#             epsilon, metrics_array = result
+#             epsilon_values.append(epsilon)  # Store this epsilon value
+#
+#             # Append each metric to its corresponding list
+#             for i in range(4):
+#                 metrics_arrays[i].append(metrics_array[i])
+#
+#         # Now plot each metric's values as a separate line
+#         for i, metric_values in enumerate(metrics_arrays):
+#             ax.plot(epsilon_values, metric_values, label=f'{intervention}_{i}')
+#         ax.set_xlabel('Epsilon')
+#         ax.set_ylabel(intervention)
+#         ax.legend()
+#
+#     plt.show()
+#
+#     return fig
+
+# def visualize_line_plot(metrics_results):
+#
+#     print("this is metric_results", metrics_results)
+#
+#     fig, axs = plt.subplots(len(metrics_results), figsize=(10, 6 * len(metrics_results)))
+#     if len(metrics_results) == 1:
+#         axs = [axs]
+#
+#     for ax, (intervention, results) in zip(axs, metrics_results.items()):
+#         for result in results:
+#             epsilon, metrics_array = result
+#
+#             print("This is result",result)
+#             print("this is metric_array", metrics_array)
+#             for metric in metrics_array:
+#
+#                 print("what is epsilon here?", epsilon)
+#                 print("what is metric here?", metric)
+#                 ax.plot(epsilon, metric, label=intervention)
+#             ax.set_xlabel('Epsilon')
+#             ax.set_ylabel(intervention)
+#             ax.legend()
+#
+#     plt.show()
+#
+#     return fig
 def visualize_histogram(results):
     num_interventions = len(results)
 
@@ -168,6 +322,15 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
 
     results = {}
 
+
+
+    # Initialize lists to hold metrics for each simulation run
+    mean_polarization_before_results = {intervention: [] for intervention in intervention_status}
+    mean_polarization_after_results = {intervention: [] for intervention in intervention_status}
+    depolarization_results = {intervention: [] for intervention in intervention_status}
+    net_depolarization_results = {intervention: [] for intervention in intervention_status}
+    max_decrease_results = {intervention: [] for intervention in intervention_status}
+
     for intervention in intervention_status:
 
 
@@ -193,18 +356,17 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
         # Graph after iterations
         g = get_final_graph(iterations, g, epochs)
 
-        pickle.dump(control_graph, open(f"graphs/{n}_nodes/before_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
-        pickle.dump(g, open(f"graphs/{n}_nodes/final_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
-
-
-
-
+        pickle.dump(control_graph, open(f"graphs/2000_nodes/before_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
+        pickle.dump(g, open(f"graphs/2000_nodes/final_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
 
         # # DataFrames for visualization
         df_before, df_after = get_data_frames(control_graph, g, d)
 
         # Polarization metrics
         polarization_before, polarization_after = get_polarization_metrics(df_before, df_after)
+
+        # Store the results for later use
+        metric_results[intervention].append((epsilon, polarization_after))
 
 
         # Instead of creating the figure, store the results
@@ -216,20 +378,39 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
             "config": config
         }
 
-    print(results)
-    print(results.keys())
+        mean_polarization_before = np.mean(polarization_before)
+        mean_polarization_after = np.mean(polarization_after)
+        depolarization = 100 - (mean_polarization_after / mean_polarization_before) * 100
+        polarization_decrease = polarization_before - polarization_after
+        net_depolarization = np.sum(polarization_decrease)
+        max_decrease = np.max(polarization_decrease)
 
-    return results
+        # Store the metrics for this run
+        mean_polarization_before_results[intervention].append((epsilon, mean_polarization_before))
+        mean_polarization_after_results[intervention].append((epsilon, mean_polarization_after))
+        depolarization_results[intervention].append((epsilon, depolarization))
+        net_depolarization_results[intervention].append((epsilon, net_depolarization))
+        max_decrease_results[intervention].append((epsilon, max_decrease))
+
+        metrics_results = {
+            'mean_polarization_before': mean_polarization_before_results,
+            'mean_polarization_after': mean_polarization_after_results,
+            'depolarization': depolarization_results,
+            'net_depolarization': net_depolarization_results,
+            'max_decrease': max_decrease_results,
+        }
+
+    return results, metric_results
 
 
 
 
 if __name__ == "__main__":
-    interval = np.arange(0, 1.1, 0.5)
+    interval = np.arange(0.45, 0.85, 0.05)
     dims = 4
 
     noise = ["noisy"]#,"noiseless"]
-    operation_list = ["softmax"]# "sequential", "ensemble", "bounded"]
+    operation_list = ["sequential"]#["softmax","ensemble", "sequential", "bounded"]
     method_list = ["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
     intervention_status = ["natural", "intervened"]
@@ -247,13 +428,21 @@ if __name__ == "__main__":
                     os.makedirs(f"images/{noise_mode}/{operation}/{method}/{seed}", exist_ok=True)
 
                     if __name__ == "__main__":
-                        # same code as above...
+
+                        metric_results = {"natural": [], "intervened": []}
                         for i in interval:
 
-                            results = run_simulation(method, seed, i, operation, intervention_status)
+                            i = np.round(i, 2)
+
+                            results, metric_results = run_simulation(method, seed, i, operation, intervention_status)
                             fig = visualize_histogram(results)
                             index = np.round(i, 2)
 
                             fig.savefig(
                                 f"images/{noise_mode}/{operation}/{method}/{seed}/fig1_{index}.png",
                                 dpi=fig.dpi)
+
+                        fig2 = visualize_line_plot(metric_results)
+                        fig2.savefig(
+                            f"images/{noise_mode}/{operation}/{method}/{seed}/fig2_{index}.png",
+                            dpi=fig.dpi)
