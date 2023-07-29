@@ -18,6 +18,7 @@ from torch_geometric.nn import SAGEConv
 import torch.nn.functional as F
 from networkx.drawing.nx_agraph import from_agraph
 from netdispatch import AGraph
+import seaborn as sns
 
 from scipy.spatial.distance import cosine, euclidean
 
@@ -54,12 +55,13 @@ class GraphSAGE(torch.nn.Module):
         return scores
 
 
+torch.cuda.empty_cache()
 "Loading link predictor model here"
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 """ Loading the link predictor to prepare for incorporation"""
 model = GraphSAGE(4, 32).to(device)
 model.load_state_dict(
-    torch.load("predictors/predictor_2000_nodes_ensemble_mean_model_0.6.pth"))
+    torch.load("predictors/predictor_2000_nodes_softmax_mean_model_0.6.pth"))
 model.eval()
 
 class AlgorithmicBiasModel_nd(DiffusionModel):
@@ -315,7 +317,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         #else:
             #print("running in noisy mode")
         if self.actual_iteration == 0:
-            print("storing the original graph and status")
+            #print("storing the original graph and status")
             self.original_graph = copy.deepcopy(self.graph)
             original_status = copy.deepcopy(self.status)
             initial_status = copy.deepcopy(self.status)
@@ -471,26 +473,12 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
 
         "Storing a version of the original graph to calibrate against"
-        # if self.actual_iteration == 0:
-        #     print("storing the original graph and status")
-        #     original_graph = copy.deepcopy(self.graph)
-        #     original_status = copy.deepcopy(self.status)
-        #     initial_status = copy.deepcopy(self.status)
-
-            #print(original_graph.edges())
 
 
         if self.params['model']['link_prediction'] == "intervened":
-            #print("Checking here what the actual iteration is", self.actual_iteration)
-            # if self.actual_iteration == 1:
-            #     self.actual_iteration += 1
-            #     print("storing the original graph and status")
-            #     self.original_graph = copy.deepcopy(self.graph)
-            #     original_status = copy.deepcopy(self.status)
-            #     initial_status = copy.deepcopy(self.status)
+
             if self.actual_iteration > 0:
                 link_predictor = model
-                #copy.deepcopy(self.status)
                 networkx_graph = self.graph.copy()
 
                 for edge in self.graph.edges():
@@ -513,25 +501,43 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
 
                 data.x = data.opinion.to(device)
-                #data.edge_index = to_undirected(data.edge_index).to(device)
+
 
                 #breaking links
                 all_edges = list(networkx_graph.edges())
                 edges_to_remove = random.sample(all_edges, break_links)
                 networkx_graph.remove_edges_from(edges_to_remove)
 
+                #creating a full adjacency matrix:
+
+                adjacency_matrix = np.ones((1000,1000))
+                np.fill_diagonal(adjacency_matrix, 0)
+
+                edge_index = np.argwhere(np.triu(adjacency_matrix) == 1).T
+                edge_index = torch.from_numpy(edge_index).long().to(device)
+
+
                 # taking the complement of G
                 graph_inv = nx.complement(networkx_graph)
-
                 data_inv = from_networkx(graph_inv)
 
-                #print("What is g", networkx_graph.number_of_nodes(), networkx_graph.number_of_edges())
-                #print("What is inv_g", graph_inv.number_of_nodes(), graph_inv.number_of_edges())
+                # testing the size of the adjacency matrix + complement
+
+                test_AD = nx.adjacency_matrix(networkx_graph)
+                complement_ad = nx.adjacency_matrix(graph_inv)
+
+                full_ad = test_AD + complement_ad
+
+                #print("This is the shape of the full adjacency matrix", full_ad.shape, "average value", np.mean(full_ad))
+
+
+
 
 
                 data_inv.edge_index = to_undirected(data_inv.edge_index).to(device)
 
-                #print("What is the inverted adjacency matrix", data_inv.edge_index.shape)
+                #print("this is the full edge_index", edge_index.shape, "average value", torch.mean(edge_index.float()))
+                #print("This is the old edge_index", data_inv.edge_index.shape, "average value", torch.mean(data_inv.edge_index.float()))
                 "testing the overlap after breaking edges"
 
                 # Generating embeddings with trained model
@@ -539,7 +545,23 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 with torch.no_grad():
 
                     #compute link probability scores here
-                    scores = link_predictor.compute_scores(data.x, data_inv.edge_index)
+                    scores = link_predictor.compute_scores(data.x, edge_index)
+
+                scores_np = scores.cpu().detach().numpy()
+                # Create an empty matrix
+                scores_matrix = np.zeros((200, 200))
+
+                # Fill in the scores
+                for i in range(edge_index.shape[1]):
+                    scores_matrix[edge_index[0, i], edge_index[1, i]] = scores[i]
+                    scores_matrix[edge_index[1, i], edge_index[0, i]] = scores[i]  # because your graph is undirected
+
+                # Create a heatmap
+                plt.figure(figsize=(10, 10))
+                sns.heatmap(scores_matrix)
+
+                # Show the plot
+                plt.show()
 
                 #selecting top N links
 

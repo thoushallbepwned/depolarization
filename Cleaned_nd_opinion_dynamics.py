@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore")
 # Network topology
 # parameters governing the graph structure
 "These variables should remain constant for all experimental runs"
-n = 1000  # number of nodes Note: This should be an even number to ensure stability
+n = 200  # number of nodes Note: This should be an even number to ensure stability
 m = 8  # number of edges per node
 p = 0.70  # probability of rewiring each edge
 minority_fraction = 0.5  # fraction of minority nodes in the network
