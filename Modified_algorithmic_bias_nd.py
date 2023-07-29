@@ -79,6 +79,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         super(self.__class__, self).__init__(graph, seed)
 
         self.discrete_state = False
+        self.original_graph = None
 
         self.available_statuses = {
             "Infected": 0
@@ -298,6 +299,9 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 s[:, i] = s_1[:, 0]
             return s
 
+
+
+        "Seeding the graph"
         # set node status
 
         #setting node sequence based on attributes
@@ -311,8 +315,12 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         #else:
             #print("running in noisy mode")
         if self.actual_iteration == 0:
+            print("storing the original graph and status")
+            self.original_graph = copy.deepcopy(self.graph)
+            original_status = copy.deepcopy(self.status)
+            initial_status = copy.deepcopy(self.status)
             if self.params['model']['mode'] == 'mixed':
-                print("How often are we entering this per iteration?", self.actual_iteration)
+                #print("How often are we entering this per iteration?", self.actual_iteration)
                 s = mixed_distr_nd(self.graph, len(self.graph.nodes()), self.params['model']['minority_fraction'], self.params['model']['dims'], self.params['model']['gamma_cov'])
                 sorted_dist = np.sort(s, axis = 0)
                 i = 0
@@ -461,14 +469,29 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         "Starting the coding block here that allows for link prediction to be on or off"
 
+
+        "Storing a version of the original graph to calibrate against"
+        # if self.actual_iteration == 0:
+        #     print("storing the original graph and status")
+        #     original_graph = copy.deepcopy(self.graph)
+        #     original_status = copy.deepcopy(self.status)
+        #     initial_status = copy.deepcopy(self.status)
+
+            #print(original_graph.edges())
+
+
         if self.params['model']['link_prediction'] == "intervened":
-            if self.actual_iteration % 2 == 0:
-
-                #print(f"We are now at intervention iteration {self.actual_iteration}")
-
+            #print("Checking here what the actual iteration is", self.actual_iteration)
+            # if self.actual_iteration == 1:
+            #     self.actual_iteration += 1
+            #     print("storing the original graph and status")
+            #     self.original_graph = copy.deepcopy(self.graph)
+            #     original_status = copy.deepcopy(self.status)
+            #     initial_status = copy.deepcopy(self.status)
+            if self.actual_iteration > 0:
                 link_predictor = model
                 #copy.deepcopy(self.status)
-                networkx_graph = copy.deepcopy(self.graph)
+                networkx_graph = self.graph.copy()
 
                 for edge in self.graph.edges():
                     networkx_graph.add_edge(*edge)
@@ -476,8 +499,8 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     opinion = actual_status[node]
                     networkx_graph.add_node(node, opinion = opinion)
 
-                edge_overlap = len(set(self.graph.edges()).intersection(networkx_graph.edges())) / len(
-                    set(self.graph.edges()))
+                edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph.edges())) / len(
+                set(self.original_graph.edges()))
                 print("Edge overlap before link prediction:", edge_overlap)
 
                 #number of links to break
@@ -495,7 +518,6 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 #breaking links
                 all_edges = list(networkx_graph.edges())
                 edges_to_remove = random.sample(all_edges, break_links)
-                print("What is the number of edges to remove", len(edges_to_remove))
                 networkx_graph.remove_edges_from(edges_to_remove)
 
                 # taking the complement of G
@@ -538,7 +560,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 # edges_to_add = random.sample(potential_new_edges, break_links)
                 # networkx_graph.add_edges_from(edges_to_add)
 
-                while new_links_added < 1:
+                while new_links_added < break_links:
                     src, dest = indices[link_index] // data.num_nodes, indices[
                         link_index] % data.num_nodes
                     #print("this is src", src)
@@ -549,14 +571,13 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                         new_links_added += 1
                     link_index += 1
 
-                edge_overlap = len(set(self.graph.edges()).intersection(networkx_graph.edges())) / len(
-                     set(self.graph.edges()))
+                edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph.edges())) / len(
+                     set(self.original_graph.edges()))
                 print("Edge overlap after link prediction:", edge_overlap, "number of edges", networkx_graph.number_of_edges())
 
                 #print(networkx_graph)
-                self.graph = networkx_graph.copy()
+                self.graph = networkx_graph
 
-                test_graph = self.graph.copy()
             #print("Completed one loop of link prediction")
 
             #print(networkx_graph)
@@ -1060,7 +1081,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         self.actual_iteration += 1
         #self.graph = networkx_graph
 
-        print("Reached end of iteration", self.actual_iteration)
+        #print("Reached end of iteration", self.actual_iteration)
 
         if node_status:
             #print("what is the iteration number", self.actual_iteration)
