@@ -255,10 +255,10 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
         # Graph after iterations
         g = get_final_graph(iterations, g, epochs)
 
-        if intervention == "natural":
-
-            #pickle.dump(control_graph, open(f"natural/{n}_nodes/before_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
-            pickle.dump(g, open(f"natural/{n}_nodes/final_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
+        # if intervention == "natural":
+        #
+        #     #pickle.dump(control_graph, open(f"natural/{n}_nodes/before_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
+        #     pickle.dump(g, open(f"natural/{n}_nodes/final_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
 
         # # DataFrames for visualization
         df_before, df_after = get_data_frames(control_graph, g, d)
@@ -311,10 +311,10 @@ if __name__ == "__main__":
     dims = 4
 
     noise = ["noisy"]#,"noiseless"]
-    operation_list = ["sequential","softmax","ensemble", "bounded"]
+    operation_list = ["sequential"]#,"softmax","ensemble", "bounded"]
     method_list = ["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
-    intervention_status = ["natural"]#, "intervened"]
+    intervention_status = ["natural", "intervened"]
 
 
     for noise_mode in noise:

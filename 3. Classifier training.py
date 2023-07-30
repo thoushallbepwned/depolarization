@@ -1,6 +1,4 @@
 import torch
-from torch_geometric.datasets import TUDataset, SNAPDataset
-from torch_geometric.data import Data, DataLoader
 from torch_geometric.nn import SAGEConv
 from torch_geometric.utils import negative_sampling, train_test_split_edges, to_undirected, from_networkx
 import torch.nn.functional as F
@@ -8,7 +6,6 @@ import matplotlib.pyplot as plt
 import torch_geometric.transforms as T
 from torch_geometric.transforms import RandomLinkSplit
 from tqdm import tqdm
-import networkx as nx
 import numpy as np
 from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score
 import pickle
@@ -75,7 +72,8 @@ model = GraphSAGE(data.num_features, 32).to(device)
 
 "parameter to control whether training new model or loading existing model"
 
-continue_training = "False"
+continue_training = "True"
+
 
 if continue_training == "True":
     saved_model_path = "predictors_new/predictor_2000_nodes.pth"
@@ -87,15 +85,36 @@ if continue_training == "True":
         optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
         start_epoch = checkpoint['epoch']
         loss = checkpoint['loss']
+        train_losses = checkpoint['train_losses']
+        train_accuracies = checkpoint['train_accuracies']
+        train_precisions = checkpoint['train_precisions']
+        train_recalls = checkpoint['train_recalls']
+        train_f1s = checkpoint['train_f1s']
+        train_aucs = checkpoint['train_aucs']
+        val_losses = checkpoint['val_losses']
+        val_accuracies = checkpoint['val_accuracies']
+        val_precisions = checkpoint['val_precisions']
+        val_recalls = checkpoint['val_recalls']
+        val_f1s = checkpoint['val_f1s']
+        val_aucs = checkpoint['val_aucs']
+        test_losses = checkpoint['test_losses']
+        test_accuracies = checkpoint['test_accuracies']
+        test_precisions = checkpoint['test_precisions']
+        test_recalls = checkpoint['test_recalls']
+        test_f1s = checkpoint['test_f1s']
+        test_aucs = checkpoint['test_aucs']
+        print("what is the starting epoch", start_epoch)
+        print("What is the starting loss?", loss)
+
 
 
 elif continue_training == "False":
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.05)
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0)
     start_epoch = 0
 
-epochs = 20
-record_every = int(epochs / 20)
 
+epochs = 100
+record_every = int(epochs / 20)
 
 # Get link labels
 def get_link_labels(edge_label_index, edge_label):
@@ -190,11 +209,6 @@ def test(data):
 
     return loss.item(), accuracy, precision, recall, f1, auc_roc, rand_precision, rand_recall, rand_f1, rand_auc_roc
 
-
-# Training Loop
-epochs = 10
-record_every = int(epochs / 10)
-
 train_losses = []
 train_accuracies = []
 train_precisions = []
@@ -217,8 +231,7 @@ test_f1s = []
 test_aucs = []
 
 
-
-for epoch in tqdm(range(start_epoch, epochs + 1)):
+for epoch in tqdm(range(start_epoch, epochs+start_epoch)):
 # Training, Validation and Testing code goes here
     train_loss, train_accuracy, train_precision, train_recall, train_f1, train_auc = train(train_data)
 
@@ -257,37 +270,63 @@ for epoch in tqdm(range(start_epoch, epochs + 1)):
               f'Test Recall: {test_recall:.4f}, Test F1: {test_f1:.4f}, Test AUC: {test_auc:.4f}')
         print(f'Rand Precision: {rand_precision:.4f}, '
               f'Rand Recall: {rand_recall:.4f}, Rand F1: {rand_f1:.4f}, Rand AUC: {rand_auc_roc:.4f}')
-
+    save_loss = train_loss
     # Model Saving
-    name = f"predictor_{version}.pth"
-    torch.save(model.state_dict(), f"predictors_new/{name}_clean")
+name = f"predictor_{version}.pth"
+torch.save(model.state_dict(), f"predictors_new/{name}_clean")
 
-    saved_model_path = f"predictors_new/{name}"
-    torch.save({
-                'epoch': epochs,
-                'model_state_dict': model.state_dict(),
-                'optimizer_state_dict': optimizer.state_dict(),
-                'loss': train_loss,
-                }, saved_model_path)
+saved_model_path = f"predictors_new/{name}"
+torch.save({
+    'epoch': epoch,
+    'model_state_dict': model.state_dict(),
+    'optimizer_state_dict': optimizer.state_dict(),
+    'loss': save_loss,
+    'train_losses': train_losses,
+    'train_accuracies': train_accuracies,
+    'train_precisions': train_precisions,
+    'train_recalls': train_recalls,
+    'train_f1s': train_f1s,
+    'train_aucs': train_aucs,
+    'val_losses': val_losses,
+    'val_accuracies': val_accuracies,
+    'val_precisions': val_precisions,
+    'val_recalls': val_recalls,
+    'val_f1s': val_f1s,
+    'val_aucs': val_aucs,
+    'test_losses': test_losses,
+    'test_accuracies': test_accuracies,
+    'test_precisions': test_precisions,
+    'test_recalls': test_recalls,
+    'test_f1s': test_f1s,
+    'test_aucs': test_aucs
+}, saved_model_path)
 
 # Plotting
+
+def get_epochs_range(start_epoch, record_every, len_metric):
+    return range(start_epoch + 1, start_epoch + len_metric * record_every + 1, record_every)
+
 def plot_metrics(metric_name):
+    # Plot losses and accuracies
+    # calculate epochs ranges
+    epochs_range = get_epochs_range(start_epoch, record_every, len(train_losses))
+
     # Plot losses and accuracies
     plt.figure(figsize=(12, 5))
 
     plt.subplot(1, 2, 1)
-    plt.plot(range(record_every, epochs + 1, record_every), train_losses, label='Training')
-    plt.plot(range(record_every, epochs + 1, record_every), val_losses, label='Validation')
-    plt.plot(range(record_every, epochs + 1, record_every), test_losses, label='Test')
+    plt.plot(epochs_range, train_losses, label='Training')
+    plt.plot(epochs_range, val_losses, label='Validation')
+    plt.plot(epochs_range, test_losses, label='Test')
     plt.title('Losses')
     plt.xlabel('Epochs')
     plt.ylabel('Loss')
     plt.legend()
 
     plt.subplot(1, 2, 2)
-    plt.plot(range(record_every, epochs + 1, record_every), train_accuracies, label='Training')
-    plt.plot(range(record_every, epochs + 1, record_every), val_accuracies, label='Validation')
-    plt.plot(range(record_every, epochs + 1, record_every), test_accuracies, label='Test')
+    plt.plot(epochs_range, train_accuracies, label='Training')
+    plt.plot(epochs_range, val_accuracies, label='Validation')
+    plt.plot(epochs_range, test_accuracies, label='Test')
     plt.title('Accuracies')
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
@@ -297,36 +336,36 @@ def plot_metrics(metric_name):
     plt.figure(figsize=(12, 10))
 
     plt.subplot(2, 2, 1)
-    plt.plot(range(record_every, epochs + 1, record_every), train_precisions, label='Training')
-    plt.plot(range(record_every, epochs + 1, record_every), val_precisions, label='Validation')
-    plt.plot(range(record_every, epochs + 1, record_every), test_precisions, label='Test')
+    plt.plot(epochs_range, train_precisions, label='Training')
+    plt.plot(epochs_range, val_precisions, label='Validation')
+    plt.plot(epochs_range, test_precisions, label='Test')
     plt.title('Precision')
     plt.xlabel('Epochs')
     plt.ylabel('Precision')
     plt.legend()
 
     plt.subplot(2, 2, 2)
-    plt.plot(range(record_every, epochs + 1, record_every), train_recalls, label='Training')
-    plt.plot(range(record_every, epochs + 1, record_every), val_recalls, label='Validation')
-    plt.plot(range(record_every, epochs + 1, record_every), test_recalls, label='Test')
+    plt.plot(epochs_range, train_recalls, label='Training')
+    plt.plot(epochs_range, val_recalls, label='Validation')
+    plt.plot(epochs_range, test_recalls, label='Test')
     plt.title('Recall')
     plt.xlabel('Epochs')
     plt.ylabel('Recall')
     plt.legend()
 
     plt.subplot(2, 2, 3)
-    plt.plot(range(record_every, epochs + 1, record_every), train_f1s, label='Training')
-    plt.plot(range(record_every, epochs + 1, record_every), val_f1s, label='Validation')
-    plt.plot(range(record_every, epochs + 1, record_every), test_f1s, label='Test')
+    plt.plot(epochs_range, train_f1s, label='Training')
+    plt.plot(epochs_range, val_f1s, label='Validation')
+    plt.plot(epochs_range, test_f1s, label='Test')
     plt.title('F1 Score')
     plt.xlabel('Epochs')
     plt.ylabel('F1 Score')
     plt.legend()
 
     plt.subplot(2, 2, 4)
-    plt.plot(range(record_every, epochs + 1, record_every), train_aucs, label='Training')
-    plt.plot(range(record_every, epochs + 1, record_every), val_aucs, label='Validation')
-    plt.plot(range(record_every, epochs + 1, record_every), test_aucs, label='Test')
+    plt.plot(epochs_range, train_aucs, label='Training')
+    plt.plot(epochs_range, val_aucs, label='Validation')
+    plt.plot(epochs_range, test_aucs, label='Test')
     plt.title('AUC-ROC')
     plt.xlabel('Epochs')
     plt.ylabel('AUC-ROC')
@@ -335,6 +374,7 @@ def plot_metrics(metric_name):
     # Show the plots
     plt.tight_layout()
     plt.show()
+
 
 plot_metrics('losses')
 plot_metrics('accuracies')

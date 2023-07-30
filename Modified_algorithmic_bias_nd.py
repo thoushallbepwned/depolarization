@@ -16,6 +16,8 @@ import torch
 from torch_geometric.utils import train_test_split_edges, to_undirected, negative_sampling, from_networkx
 from torch_geometric.nn import SAGEConv
 import torch.nn.functional as F
+import torch_geometric.utils as utils
+
 from networkx.drawing.nx_agraph import from_agraph
 from netdispatch import AGraph
 import seaborn as sns
@@ -61,7 +63,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 """ Loading the link predictor to prepare for incorporation"""
 model = GraphSAGE(4, 32).to(device)
 model.load_state_dict(
-    torch.load("predictors/predictor_2000_nodes_softmax_mean_model_0.6.pth"))
+    torch.load("predictors_new/predictor_2000_nodes_clean.pth"))
 model.eval()
 
 class AlgorithmicBiasModel_nd(DiffusionModel):
@@ -508,33 +510,32 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 edges_to_remove = random.sample(all_edges, break_links)
                 networkx_graph.remove_edges_from(edges_to_remove)
 
-                #creating a full adjacency matrix:
-
-                adjacency_matrix = np.ones((1000,1000))
-                np.fill_diagonal(adjacency_matrix, 0)
-
-                edge_index = np.argwhere(np.triu(adjacency_matrix) == 1).T
-                edge_index = torch.from_numpy(edge_index).long().to(device)
-
-
-                # taking the complement of G
-                graph_inv = nx.complement(networkx_graph)
-                data_inv = from_networkx(graph_inv)
-
-                # testing the size of the adjacency matrix + complement
-
-                test_AD = nx.adjacency_matrix(networkx_graph)
-                complement_ad = nx.adjacency_matrix(graph_inv)
-
-                full_ad = test_AD + complement_ad
-
                 #print("This is the shape of the full adjacency matrix", full_ad.shape, "average value", np.mean(full_ad))
 
+                num_nodes = data.num_nodes
+                num_neg_samples = data.edge_index.shape[
+                    1]  # Generate as many negative samples as there are positive edges
 
+                # Generate negative edges
+                neg_edge_index = utils.negative_sampling(edge_index=data.edge_index,
+                                                         num_nodes=num_nodes,
+                                                         num_neg_samples=num_neg_samples,
+                                                         method="sparse")
 
+                # Concatenate positive and negative edges
+                edge_label_index = torch.cat([data.edge_index, neg_edge_index], dim=1)
 
+                # Create corresponding labels: 1 for positive edges, 0 for negative edges
+                edge_label = torch.cat([torch.ones(data.edge_index.shape[1]),
+                                        torch.zeros(num_neg_samples)], dim=0)
 
-                data_inv.edge_index = to_undirected(data_inv.edge_index).to(device)
+                # Add edge_label and edge_label_index to your data object
+                data.edge_label = edge_label.to(device)
+                data.edge_label_index = edge_label_index.to(device)
+
+                # Get positive and negative edge indices
+                pos_edge_index = data.edge_label_index[:, data.edge_label == 1]
+                neg_edge_index = data.edge_label_index[:, data.edge_label == 0]
 
                 #print("this is the full edge_index", edge_index.shape, "average value", torch.mean(edge_index.float()))
                 #print("This is the old edge_index", data_inv.edge_index.shape, "average value", torch.mean(data_inv.edge_index.float()))
@@ -544,33 +545,30 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                 with torch.no_grad():
 
-                    #compute link probability scores here
-                    scores = link_predictor.compute_scores(data.x, edge_index)
+                    z = model(data.x, data.edge_index.to(device))
 
-                scores_np = scores.cpu().detach().numpy()
-                # Create an empty matrix
-                scores_matrix = np.zeros((200, 200))
+                    # Calculate the link logits
+                    link_logits = torch.cat(
+                        [(z[edge[0]] * z[edge[1]]).sum(dim=-1).unsqueeze(0) for edge in pos_edge_index.t().tolist()] +
+                        [(z[edge[0]] * z[edge[1]]).sum(dim=-1).unsqueeze(0) for edge in neg_edge_index.t().tolist()],
+                        dim=0)
 
-                # Fill in the scores
-                for i in range(edge_index.shape[1]):
-                    scores_matrix[edge_index[0, i], edge_index[1, i]] = scores[i]
-                    scores_matrix[edge_index[1, i], edge_index[0, i]] = scores[i]  # because your graph is undirected
+                    # Unflatten the tensors
+                    link_logits_unflattened = link_logits.view(-1, 2)
+                    edge_label_index_unflattened = edge_label_index.t().view(-1, 2)
 
-                # Create a heatmap
-                plt.figure(figsize=(10, 10))
-                sns.heatmap(scores_matrix)
+                    # Now, each row in edge_label_index_unflattened corresponds to an edge, and the same row in link_logits_unflattened is the logit of that edge
 
-                # Show the plot
-                plt.show()
+                    # Apply sigmoid function to convert logits to probabilities
+                    probabilities = torch.sigmoid(link_logits_unflattened)
 
-                #selecting top N links
+                    #print("what is this?", probabilities.shape)
 
-                link_scores = scores.view(-1)
-                sorted_link_scores, indices = torch.sort(link_scores, descending=True)
+                sorted_prob_indices = torch.argsort(probabilities[:, 1], descending=False)
 
+                sorted_edges = edge_label_index_unflattened[sorted_prob_indices.cpu()]
 
-                #print("these are the descending link scores", sorted_link_scores.shape)
-
+                sorted_edges = sorted_edges.to(device)
 
 
                 new_links_added = 0
@@ -583,10 +581,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 # networkx_graph.add_edges_from(edges_to_add)
 
                 while new_links_added < break_links:
-                    src, dest = indices[link_index] // data.num_nodes, indices[
-                        link_index] % data.num_nodes
-                    #print("this is src", src)
-                    #print("this is dest", dest)
+                    src, dest = sorted_edges[link_index]
 
                     if not networkx_graph.has_edge(src.item(), dest.item()):
                         networkx_graph.add_edge(src.item(), dest.item())
