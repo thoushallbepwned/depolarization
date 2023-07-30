@@ -27,7 +27,7 @@ warnings.filterwarnings("ignore")
 # Network topology
 # parameters governing the graph structure
 "These variables should remain constant for all experimental runs"
-n = 200  # number of nodes Note: This should be an even number to ensure stability
+n = 2000  # number of nodes Note: This should be an even number to ensure stability
 m = 8  # number of edges per node
 p = 0.70  # probability of rewiring each edge
 minority_fraction = 0.5  # fraction of minority nodes in the network
@@ -255,8 +255,10 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
         # Graph after iterations
         g = get_final_graph(iterations, g, epochs)
 
-        pickle.dump(control_graph, open(f"graphs/2000_nodes/before_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
-        pickle.dump(g, open(f"graphs/2000_nodes/final_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
+        if intervention == "natural":
+
+            #pickle.dump(control_graph, open(f"natural/{n}_nodes/before_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
+            pickle.dump(g, open(f"natural/{n}_nodes/final_graph_{operation}_{method}_{seed}_{np.round(epsilon,2)}_{noise_mode}.p", "wb"))
 
         # # DataFrames for visualization
         df_before, df_after = get_data_frames(control_graph, g, d)
@@ -309,10 +311,10 @@ if __name__ == "__main__":
     dims = 4
 
     noise = ["noisy"]#,"noiseless"]
-    operation_list = ["sequential"]#["softmax","ensemble", "sequential", "bounded"]
+    operation_list = ["sequential","softmax","ensemble", "bounded"]
     method_list = ["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
-    intervention_status = ["natural", "intervened"]
+    intervention_status = ["natural"]#, "intervened"]
 
 
     for noise_mode in noise:
@@ -334,14 +336,14 @@ if __name__ == "__main__":
                             i = np.round(i, 2)
 
                             results, metric_results = run_simulation(method, seed, i, operation, intervention_status)
-                            fig = visualize_histogram(results)
+                            #fig = visualize_histogram(results)
                             index = np.round(i, 2)
 
-                            fig.savefig(
-                                f"images/{noise_mode}/{operation}/{method}/{seed}/fig1_{index}.png",
-                                dpi=fig.dpi)
-
-                        fig2 = visualize_line_plot(metric_results)
-                        fig2.savefig(
-                            f"images/{noise_mode}/{operation}/{method}/{seed}/fig2_{index}.png",
-                            dpi=fig.dpi)
+                        #     fig.savefig(
+                        #         f"images/{noise_mode}/{operation}/{method}/{seed}/fig1_{index}.png",
+                        #         dpi=fig.dpi)
+                        #
+                        # fig2 = visualize_line_plot(metric_results)
+                        # fig2.savefig(
+                        #     f"images/{noise_mode}/{operation}/{method}/{seed}/fig2_{index}.png",
+                        #     dpi=fig.dpi)

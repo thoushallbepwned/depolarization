@@ -12,7 +12,8 @@ import networkx as nx
 import numpy as np
 from sklearn.metrics import precision_score, recall_score, f1_score, roc_auc_score
 import pickle
-
+import torch_geometric.utils as utils
+import os
 
 # Metric Calculation
 def get_metrics(true_labels, pred_labels, probabilities):
@@ -35,7 +36,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Load Graph
 version = "2000_nodes"
-file = f"graphs/{version}/final_graph_sequential_mean_euclidean_mixed_0.6_noisy.p"
+file = f"natural/{version}/final_graph_sequential_mean_euclidean_mixed_0.8_noisy.p"
 g = pickle.load(open(file, "rb"))
 
 # Convert node attributes to PyTorch tensor
@@ -65,13 +66,35 @@ class GraphSAGE(torch.nn.Module):
     def forward(self, x, edge_index):
         x = self.conv1(x, edge_index)
         x = F.relu(x)
-        x = F.dropout(x, p=0.5, training=self.training)
+        x = F.dropout(x, p=0.25, training=self.training)
         x = self.conv2(x, edge_index)
         return x
 
 
 model = GraphSAGE(data.num_features, 32).to(device)
-optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0)
+
+"parameter to control whether training new model or loading existing model"
+
+continue_training = "False"
+
+if continue_training == "True":
+    saved_model_path = "predictors_new/predictor_2000_nodes.pth"
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.0)
+
+    if os.path.isfile(saved_model_path):
+        checkpoint = torch.load(saved_model_path)
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+        start_epoch = checkpoint['epoch']
+        loss = checkpoint['loss']
+
+
+elif continue_training == "False":
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.005, weight_decay=0.05)
+    start_epoch = 0
+
+epochs = 20
+record_every = int(epochs / 20)
 
 
 # Get link labels
@@ -83,6 +106,26 @@ def get_link_labels(edge_label_index, edge_label):
 def train(data):
     # Code for training
     model.train()
+
+    num_nodes = data.num_nodes
+    num_neg_samples = data.edge_index.shape[1]  # Generate as many negative samples as there are positive edges
+
+    # Generate negative edges
+    neg_edge_index = utils.negative_sampling(edge_index=data.edge_index,
+                                             num_nodes=num_nodes,
+                                             num_neg_samples=num_neg_samples,
+                                             method="sparse")
+
+    # Concatenate positive and negative edges
+    edge_label_index = torch.cat([data.edge_index, neg_edge_index], dim=1)
+
+    # Create corresponding labels: 1 for positive edges, 0 for negative edges
+    edge_label = torch.cat([torch.ones(data.edge_index.shape[1]),
+                            torch.zeros(num_neg_samples)], dim=0)
+
+    # Add edge_label and edge_label_index to your data object
+    data.edge_label = edge_label.to(device)
+    data.edge_label_index = edge_label_index.to(device)
 
     # Get positive and negative edge indices
     pos_edge_index = data.edge_label_index[:, data.edge_label == 1]
@@ -102,7 +145,7 @@ def train(data):
     loss = F.binary_cross_entropy_with_logits(link_logits, link_labels)
 
     # Calculate accuracy
-    predictions = (torch.sigmoid(link_logits) > 0.5).long()
+    predictions = (torch.sigmoid(link_logits) > 0.75).long()
     accuracy = (predictions == link_labels.long()).sum().item() / link_labels.size(0)
 
     # Additional metrics
@@ -132,7 +175,7 @@ def test(data):
     link_labels = get_link_labels(data.edge_label_index, data.edge_label)
     loss = F.binary_cross_entropy_with_logits(link_logits, link_labels)
 
-    predictions = (torch.sigmoid(link_logits) > 0.5).long()
+    predictions = (torch.sigmoid(link_logits) > 0.75).long()
     accuracy = (predictions == link_labels.long()).sum().item() / link_labels.size(0)
 
     precision, recall, f1, auc_roc = get_metrics(link_labels.cpu().detach().numpy(), predictions.cpu().detach().numpy(),
@@ -149,8 +192,8 @@ def test(data):
 
 
 # Training Loop
-epochs = 200
-record_every = int(epochs / 20)
+epochs = 10
+record_every = int(epochs / 10)
 
 train_losses = []
 train_accuracies = []
@@ -173,8 +216,10 @@ test_recalls = []
 test_f1s = []
 test_aucs = []
 
-for epoch in tqdm(range(1, epochs + 1)):
-    # Training, Validation and Testing code goes here
+
+
+for epoch in tqdm(range(start_epoch, epochs + 1)):
+# Training, Validation and Testing code goes here
     train_loss, train_accuracy, train_precision, train_recall, train_f1, train_auc = train(train_data)
 
     if epoch % record_every == 0:
@@ -203,8 +248,6 @@ for epoch in tqdm(range(1, epochs + 1)):
         test_f1s.append(test_f1)
         test_aucs.append(test_auc)
 
-
-
         print(" ")
         print(f'Epoch: {epoch:03d}, Loss: {train_loss:.4f}, Acc: {train_accuracy:.4f}, Precision: {train_precision:.4f}, '
               f'Recall: {train_recall:.4f}, F1: {train_f1:.4f}, AUC: {train_auc:.4f}')
@@ -215,10 +258,17 @@ for epoch in tqdm(range(1, epochs + 1)):
         print(f'Rand Precision: {rand_precision:.4f}, '
               f'Rand Recall: {rand_recall:.4f}, Rand F1: {rand_f1:.4f}, Rand AUC: {rand_auc_roc:.4f}')
 
-# Model Saving
-name = f"predictor_{version}_sequential_mean_model_0.6.pth"
-torch.save(model.state_dict(), f"predictors/{name}")
+    # Model Saving
+    name = f"predictor_{version}.pth"
+    torch.save(model.state_dict(), f"predictors_new/{name}_clean")
 
+    saved_model_path = f"predictors_new/{name}"
+    torch.save({
+                'epoch': epochs,
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                'loss': train_loss,
+                }, saved_model_path)
 
 # Plotting
 def plot_metrics(metric_name):
