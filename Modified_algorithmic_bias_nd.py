@@ -562,9 +562,12 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     # Apply sigmoid function to convert logits to probabilities
                     probabilities = torch.sigmoid(link_logits_unflattened)
 
-                    #print("what is this?", probabilities.shape)
+                    print("what is this?", probabilities)
 
                 sorted_prob_indices = torch.argsort(probabilities[:, 1], descending=False)
+                print(sorted_prob_indices)
+
+                "We need to figure out what is going on here, what indices are being passed back? Whatever it is is appears tobe highly accurate."
 
                 sorted_edges = edge_label_index_unflattened[sorted_prob_indices.cpu()]
 

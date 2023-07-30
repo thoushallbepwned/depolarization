@@ -307,7 +307,7 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
 
 
 if __name__ == "__main__":
-    interval = np.arange(0.45, 0.85, 0.05)
+    interval = np.arange(0.45, 0.85, 0.15)
     dims = 4
 
     noise = ["noisy"]#,"noiseless"]
@@ -336,14 +336,14 @@ if __name__ == "__main__":
                             i = np.round(i, 2)
 
                             results, metric_results = run_simulation(method, seed, i, operation, intervention_status)
-                            #fig = visualize_histogram(results)
+                            fig = visualize_histogram(results)
                             index = np.round(i, 2)
 
-                        #     fig.savefig(
-                        #         f"images/{noise_mode}/{operation}/{method}/{seed}/fig1_{index}.png",
-                        #         dpi=fig.dpi)
-                        #
-                        # fig2 = visualize_line_plot(metric_results)
-                        # fig2.savefig(
-                        #     f"images/{noise_mode}/{operation}/{method}/{seed}/fig2_{index}.png",
-                        #     dpi=fig.dpi)
+                            fig.savefig(
+                                f"images/{noise_mode}/{operation}/{method}/{seed}/fig1_{index}.png",
+                                dpi=fig.dpi)
+
+                        fig2 = visualize_line_plot(metric_results)
+                        fig2.savefig(
+                            f"images/{noise_mode}/{operation}/{method}/{seed}/fig2_{index}.png",
+                            dpi=fig.dpi)
