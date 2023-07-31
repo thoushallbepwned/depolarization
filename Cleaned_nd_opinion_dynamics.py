@@ -307,7 +307,7 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
 
 
 if __name__ == "__main__":
-    interval = np.arange(0.45, 0.85, 0.15)
+    interval = np.arange(0.40, 0.85, 0.05)
     dims = 4
 
     noise = ["noisy"]#,"noiseless"]

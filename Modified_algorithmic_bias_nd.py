@@ -489,99 +489,103 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     opinion = actual_status[node]
                     networkx_graph.add_node(node, opinion = opinion)
 
-                edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph.edges())) / len(
-                set(self.original_graph.edges()))
-                print("Edge overlap before link prediction:", edge_overlap)
 
                 #number of links to break
                 break_links = int(0.1*float(networkx_graph.number_of_edges())) #change this later
 
                 #Converting to Pytorch Geometric format
                 data = from_networkx(networkx_graph)
-
-
-
-
                 data.x = data.opinion.to(device)
-
 
                 #breaking links
                 all_edges = list(networkx_graph.edges())
                 edges_to_remove = random.sample(all_edges, break_links)
                 networkx_graph.remove_edges_from(edges_to_remove)
 
+                data2 = from_networkx(networkx_graph)
+
+                edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph.edges())) / len(
+                    set(self.original_graph.edges()))
+                print("Edge overlap after breaking:", np.round(edge_overlap,4),"number of edges", networkx_graph.number_of_edges())
+
                 #print("This is the shape of the full adjacency matrix", full_ad.shape, "average value", np.mean(full_ad))
 
                 num_nodes = data.num_nodes
-                num_neg_samples = data.edge_index.shape[
+                num_neg_samples = data2.edge_index.shape[
                     1]  # Generate as many negative samples as there are positive edges
 
-                # Generate negative edges
-                neg_edge_index = utils.negative_sampling(edge_index=data.edge_index,
+
+                #print("What is data.edge_index?", data2.edge_index.shape, data2.edge_index)
+
+                # # Generate negative edges
+                neg_edge_index = utils.negative_sampling(edge_index=data2.edge_index,
                                                          num_nodes=num_nodes,
-                                                         num_neg_samples=num_neg_samples,
-                                                         method="sparse")
+                                                         num_neg_samples=33*num_neg_samples,
+                                                         method="sparse",
+                                                         force_undirected= True)
+
+                "testing how long it takes to run on the complement"
+
+                complement = nx.complement(networkx_graph)
+                #
+                # neg_edge_index = complement.edges()
+                # neg_edge_index = np.array(list(neg_edge_index)).T
+                # neg_edge_index = torch.from_numpy(neg_edge_index).long()
+                # #print("how large is this thing?", neg_edge_index.shape)
+
+
+                #print("testing the neg_edge_index", neg_edge_index.shape, neg_edge_index)
 
                 # Concatenate positive and negative edges
-                edge_label_index = torch.cat([data.edge_index, neg_edge_index], dim=1)
+                #edge_label_index = torch.cat([data.edge_index, neg_edge_index], dim=1)
 
-                # Create corresponding labels: 1 for positive edges, 0 for negative edges
-                edge_label = torch.cat([torch.ones(data.edge_index.shape[1]),
-                                        torch.zeros(num_neg_samples)], dim=0)
-
-                # Add edge_label and edge_label_index to your data object
-                data.edge_label = edge_label.to(device)
-                data.edge_label_index = edge_label_index.to(device)
-
-                # Get positive and negative edge indices
-                pos_edge_index = data.edge_label_index[:, data.edge_label == 1]
-                neg_edge_index = data.edge_label_index[:, data.edge_label == 0]
-
-                #print("this is the full edge_index", edge_index.shape, "average value", torch.mean(edge_index.float()))
-                #print("This is the old edge_index", data_inv.edge_index.shape, "average value", torch.mean(data_inv.edge_index.float()))
-                "testing the overlap after breaking edges"
 
                 # Generating embeddings with trained model
 
                 with torch.no_grad():
 
-                    z = model(data.x, data.edge_index.to(device))
+                    z = model(data.x, data2.edge_index.to(device))
+
+                    #print("what is z exactly?", z.shape)
+                    #print("show me z", z)
 
                     # Calculate the link logits
                     link_logits = torch.cat(
-                        [(z[edge[0]] * z[edge[1]]).sum(dim=-1).unsqueeze(0) for edge in pos_edge_index.t().tolist()] +
                         [(z[edge[0]] * z[edge[1]]).sum(dim=-1).unsqueeze(0) for edge in neg_edge_index.t().tolist()],
                         dim=0)
 
-                    # Unflatten the tensors
-                    link_logits_unflattened = link_logits.view(-1, 2)
-                    edge_label_index_unflattened = edge_label_index.t().view(-1, 2)
 
-                    # Now, each row in edge_label_index_unflattened corresponds to an edge, and the same row in link_logits_unflattened is the logit of that edge
+                    edge_label_index_unflattened = neg_edge_index.t()
+
+                    #print("this is the edge label index this should be source, dest",edge_label_index_unflattened)
 
                     # Apply sigmoid function to convert logits to probabilities
-                    probabilities = torch.sigmoid(link_logits_unflattened)
+                    probabilities = torch.sigmoid(link_logits)
 
-                    print("what is this?", probabilities)
+                    #print("what are these probabilities?", probabilities)
 
-                sorted_prob_indices = torch.argsort(probabilities[:, 1], descending=False)
-                print(sorted_prob_indices)
-
-                "We need to figure out what is going on here, what indices are being passed back? Whatever it is is appears tobe highly accurate."
+                sorted_prob_indices = torch.argsort(probabilities, descending=False)
 
                 sorted_edges = edge_label_index_unflattened[sorted_prob_indices.cpu()]
+                #print("What are the sorted edges?", sorted_edges.shape)
 
-                sorted_edges = sorted_edges.to(device)
+                # sorted_edges = sorted_edges
+                #
+                # "comparing overlap between sorted_edges and the existant edges"
+                #
+                # edge_list_test = networkx_graph.edges()
+                #
+                # edge_set1 = set(sorted_edges)
+                # edge_set2 = set(edge_list_test)
+                #
+                # common_edges = edge_set1.intersection(edge_set2)
+                # print("the common edges are", len(common_edges))
+
+
 
 
                 new_links_added = 0
                 link_index = 0
-
-                # potential_new_edges = [(i, j) for i in range(data.num_nodes) for j in range(i + 1, data.num_nodes)
-                #                        if not networkx_graph.has_edge(i, j)]
-                #
-                # edges_to_add = random.sample(potential_new_edges, break_links)
-                # networkx_graph.add_edges_from(edges_to_add)
 
                 while new_links_added < break_links:
                     src, dest = sorted_edges[link_index]
@@ -591,9 +595,15 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                         new_links_added += 1
                     link_index += 1
 
+                # potential_new_edges = [(i, j) for i in range(data.num_nodes) for j in range(i + 1, data.num_nodes)
+                #                        if not networkx_graph.has_edge(i, j)]
+                #
+                # edges_to_add = random.sample(potential_new_edges, break_links)
+                # networkx_graph.add_edges_from(edges_to_add)
+
                 edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph.edges())) / len(
                      set(self.original_graph.edges()))
-                print("Edge overlap after link prediction:", edge_overlap, "number of edges", networkx_graph.number_of_edges())
+                print("Edge overlap after link prediction:", np.round(edge_overlap,4), "number of edges", networkx_graph.number_of_edges())
 
                 #print(networkx_graph)
                 self.graph = networkx_graph
