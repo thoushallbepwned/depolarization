@@ -33,7 +33,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 # Load Graph
 version = "2000_nodes"
-file = f"natural/{version}/final_graph_sequential_mean_euclidean_mixed_0.8_noisy.p"
+file = f"natural/{version}/final_graph_softmax_mean_euclidean_mixed_0.8_noisy.p"
 g = pickle.load(open(file, "rb"))
 
 # Convert node attributes to PyTorch tensor
@@ -72,7 +72,7 @@ model = GraphSAGE(data.num_features, 32).to(device)
 
 "parameter to control whether training new model or loading existing model"
 
-continue_training = "True"
+continue_training = "False"
 
 
 if continue_training == "True":
@@ -113,7 +113,7 @@ elif continue_training == "False":
     start_epoch = 0
 
 
-epochs = 100
+epochs = 400
 record_every = int(epochs / 20)
 
 # Get link labels
