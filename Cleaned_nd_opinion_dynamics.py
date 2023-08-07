@@ -73,9 +73,9 @@ def configure_model(epsilon, mode, minority_fraction, d, operational_mode, dista
 
 def calculate_epochs(operational_mode, d):
     if operational_mode == "ensemble":
-        epochs = int(4/d)
+        epochs = int(16/d)
     else:
-        epochs = 4
+        epochs = 16
     return epochs
 
 def get_control_graph(iterations, g):
@@ -232,6 +232,8 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
 
     for intervention in intervention_status:
 
+        print("running in intervention mode: ", intervention)
+
 
         # Generating graph
         g = homophilic_barabasi_albert_graph(n, m, minority_fraction, similitude, p) # generating Graph
@@ -307,14 +309,14 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
 
 
 if __name__ == "__main__":
-    interval = np.arange(0.40, 0.85, 0.05)
+    interval = np.arange(0.40, 0.85, 0.2)
     dims = 4
 
     noise = ["noisy"]#,"noiseless"]
-    operation_list = ["sequential","softmax","ensemble", "bounded"]
+    operation_list = ["ensemble"]#["sequential","softmax","ensemble", "bounded"]
     method_list = ["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
-    intervention_status = ["natural", "intervened"]
+    intervention_status = ["natural", "intervened", "targeted"]#["natural", "intervened", "targeted"]
 
 
     for noise_mode in noise:
@@ -330,7 +332,7 @@ if __name__ == "__main__":
 
                     if __name__ == "__main__":
 
-                        metric_results = {"natural": [], "intervened": []}
+                        metric_results = {"natural": [], "intervened": [], "targeted": []}
                         for i in interval:
 
                             i = np.round(i, 2)

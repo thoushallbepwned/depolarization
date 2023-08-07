@@ -63,7 +63,7 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 """ Loading the link predictor to prepare for incorporation"""
 model = GraphSAGE(4, 32).to(device)
 model.load_state_dict(
-    torch.load("predictors_new/predictor_2000_nodes_clean.pth"))
+    torch.load("predictors_new/predictor_2000_nodes_sequential_mean_clean.pth"))
 model.eval()
 
 class AlgorithmicBiasModel_nd(DiffusionModel):
@@ -470,14 +470,14 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         n = self.graph.number_of_nodes()
 
 
-
         "Starting the coding block here that allows for link prediction to be on or off"
-
 
         "Storing a version of the original graph to calibrate against"
 
 
         if self.params['model']['link_prediction'] == "intervened":
+
+            #print("Are we reaching the intervened code at all?")
 
             if self.actual_iteration > 0:
                 link_predictor = model
@@ -517,21 +517,21 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                 #print("What is data.edge_index?", data2.edge_index.shape, data2.edge_index)
 
-                # # Generate negative edges
-                # neg_edge_index = utils.negative_sampling(edge_index=data2.edge_index,
-                #                                          num_nodes=num_nodes,
-                #                                          num_neg_samples=33*num_neg_samples,
-                #                                          method="sparse",
-                #                                          force_undirected= True)
+                # Generate negative edges
+                neg_edge_index = utils.negative_sampling(edge_index=data2.edge_index,
+                                                         num_nodes=num_nodes,
+                                                         num_neg_samples=10*num_neg_samples,
+                                                         method="sparse",
+                                                         force_undirected= True)
 
                 "testing how long it takes to run on the complement"
 
-                complement = nx.complement(networkx_graph)
-                #
-                neg_edge_index = complement.edges()
-                neg_edge_index = np.array(list(neg_edge_index)).T
-                neg_edge_index = torch.from_numpy(neg_edge_index).long()
-                # #print("how large is this thing?", neg_edge_index.shape)
+                # complement = nx.complement(networkx_graph)
+                # #
+                # neg_edge_index = complement.edges()
+                # neg_edge_index = np.array(list(neg_edge_index)).T
+                # neg_edge_index = torch.from_numpy(neg_edge_index).long()
+                # # #print("how large is this thing?", neg_edge_index.shape)
 
 
                 #print("testing the neg_edge_index", neg_edge_index.shape, neg_edge_index)
@@ -612,9 +612,46 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
             #print(networkx_graph)
 
-        elif self.params['model']['link_prediction'] == "natural":
-            #print(f"We are entering natural loop for iteration {self.actual_iteration}")
+        if self.params['model']['link_prediction'] == "natural":
+            print(f"We are entering natural loop for iteration {self.actual_iteration}")
             pass
+
+        if self.params['model']['link_prediction'] == "targeted":
+            print("entering the targeted code section")
+            "Looking at the edgelist and calculating difference metrics for entire array"
+
+            if self.actual_iteration > 0:
+                networkx_graph2 = self.graph.copy()
+
+                for edge in self.graph.edges():
+                    networkx_graph2.add_edge(*edge)
+                for node in self.graph.nodes():
+                    opinion = actual_status[node]
+                    networkx_graph2.add_node(node, opinion = opinion)
+
+            "introduction notion of tension: mean euclidean difference between two connected node opinions"
+
+            edge_tension = []
+            for edge in networkx_graph2.edges():
+                diff = [((actual_status[edge[0]][d] + 1) - (actual_status[edge[1]][d] + 1)) ** 2 for d in
+                        range(self.params['model']['dims'])]
+                tension = np.sqrt(np.sum(diff))
+                edge_tension.append((edge, tension))
+
+            # converting edge_tensions into an array
+
+            edge_tension_array = np.array(edge_tension, dtype= object)
+
+            print("What is the shape of this object?", edge_tension_array.shape)
+            print("what is the object itself?", edge_tension_array)
+
+
+            pass
+
+        else:
+            #print("No legal intervention mode selected, exiting", self.params['model']['link_prediction'])
+            pass
+
 
 
         #interact with peers
