@@ -627,12 +627,23 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                         networkx_graph2.remove_edge(*edge[:2])
                         broken_links += 1
 
+                #
+                edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph2.edges())) / len(
+                    set(self.original_graph.edges()))
+                print("Edge overlap after breaking in targeted:", np.round(edge_overlap, 4), "number of edges",
+                      networkx_graph2.number_of_edges())
+
                 # Add links back randomly
                 complement = nx.complement(networkx_graph2)
                 non_edges = list(complement.edges())
                 edges_to_add = random.sample(non_edges, break_links)
                 for edge in edges_to_add:
                     networkx_graph2.add_edge(*edge)
+
+                edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph2.edges())) / len(
+                    set(self.original_graph.edges()))
+                print("Edge overlap after restoration in targeted:", np.round(edge_overlap, 4), "number of edges",
+                      networkx_graph2.number_of_edges())
 
                 self.graph = networkx_graph2
 
