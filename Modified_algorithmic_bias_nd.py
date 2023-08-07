@@ -452,32 +452,19 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             e_x = np.exp(x - np.max(x))  # Subtracting the maximum value for numerical stability
             return e_x / e_x.sum()
 
-        actual_status = copy.deepcopy(self.status)
+        def link_prediction(self, model, actual_status, break_fraction=0.1):
+            """
+            This function breaks and re-adds edges in a graph based on node opinions.
 
-        if self.actual_iteration == 0:
-            self.actual_iteration += 1
+            Args:
+                self: The class instance
+                model: The link prediction model
+                actual_status: The actual status of nodes
+                break_fraction: The fraction of edges to break (default is 0.1)
 
-            delta, node_count, status_delta = self.status_delta(self.status)
-            #print(delta, node_count, status_delta)
-            if node_status:
-                #print("what is the status here?", actual_status)
-                return {"iteration": 0, "status": actual_status,
-                        "node_count": node_count.copy(), "status_delta": status_delta.copy()}
-            else:
-                return {"iteration": 0, "status": {},
-                        "node_count": node_count.copy(), "status_delta": status_delta.copy()}
-
-        n = self.graph.number_of_nodes()
-
-
-        "Starting the coding block here that allows for link prediction to be on or off"
-
-        "Storing a version of the original graph to calibrate against"
-
-
-        if self.params['model']['link_prediction'] == "intervened":
-
-            #print("Are we reaching the intervened code at all?")
+            Returns:
+                None
+            """
 
             if self.actual_iteration > 0:
                 link_predictor = model
@@ -487,17 +474,16 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     networkx_graph.add_edge(*edge)
                 for node in self.graph.nodes():
                     opinion = actual_status[node]
-                    networkx_graph.add_node(node, opinion = opinion)
+                    networkx_graph.add_node(node, opinion=opinion)
 
+                # number of links to break
+                break_links = int(break_fraction * float(networkx_graph.number_of_edges()))
 
-                #number of links to break
-                break_links = int(0.1*float(networkx_graph.number_of_edges())) #change this later
-
-                #Converting to Pytorch Geometric format
+                # Converting to Pytorch Geometric format
                 data = from_networkx(networkx_graph)
                 data.x = data.opinion.to(device)
 
-                #breaking links
+                # breaking links
                 all_edges = list(networkx_graph.edges())
                 edges_to_remove = random.sample(all_edges, break_links)
                 networkx_graph.remove_edges_from(edges_to_remove)
@@ -506,9 +492,8 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                 edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph.edges())) / len(
                     set(self.original_graph.edges()))
-                print("Edge overlap after breaking:", np.round(edge_overlap,4),"number of edges", networkx_graph.number_of_edges())
-
-                #print("This is the shape of the full adjacency matrix", full_ad.shape, "average value", np.mean(full_ad))
+                print("Edge overlap after breaking:", np.round(edge_overlap, 4), "number of edges",
+                      networkx_graph.number_of_edges())
 
                 num_nodes = data.num_nodes
                 num_neg_samples = data2.edge_index.shape[
@@ -517,21 +502,21 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                 #print("What is data.edge_index?", data2.edge_index.shape, data2.edge_index)
 
-                # Generate negative edges
-                neg_edge_index = utils.negative_sampling(edge_index=data2.edge_index,
-                                                         num_nodes=num_nodes,
-                                                         num_neg_samples=10*num_neg_samples,
-                                                         method="sparse",
-                                                         force_undirected= True)
+                # # Generate negative edges
+                # neg_edge_index = utils.negative_sampling(edge_index=data2.edge_index,
+                #                                          num_nodes=num_nodes,
+                #                                          num_neg_samples=1*num_neg_samples,
+                #                                          method="sparse",
+                #                                          force_undirected= True)
 
                 "testing how long it takes to run on the complement"
 
-                # complement = nx.complement(networkx_graph)
-                # #
-                # neg_edge_index = complement.edges()
-                # neg_edge_index = np.array(list(neg_edge_index)).T
-                # neg_edge_index = torch.from_numpy(neg_edge_index).long()
-                # # #print("how large is this thing?", neg_edge_index.shape)
+                complement = nx.complement(networkx_graph)
+                #
+                neg_edge_index = complement.edges()
+                neg_edge_index = np.array(list(neg_edge_index)).T
+                neg_edge_index = torch.from_numpy(neg_edge_index).long()
+                # #print("how large is this thing?", neg_edge_index.shape)
 
 
                 #print("testing the neg_edge_index", neg_edge_index.shape, neg_edge_index)
@@ -608,6 +593,209 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 #print(networkx_graph)
                 self.graph = networkx_graph
 
+
+        def removal_protocol(self, model, actual_status, tension_threshold = 1.0, break_fraction = 0.1):
+            if self.actual_iteration > 0:
+                networkx_graph2 = self.graph.copy()
+
+                for edge in self.graph.edges():
+                    networkx_graph2.add_edge(*edge)
+                for node in self.graph.nodes():
+                    opinion = actual_status[node]
+                    networkx_graph2.add_node(node, opinion=opinion)
+
+                # Calculate tension
+                for edge in networkx_graph2.edges():
+                    diff = [((actual_status[edge[0]][d] + 1) - (actual_status[edge[1]][d] + 1)) ** 2 for d in
+                            range(self.params['model']['dims'])]
+                    tension = np.sqrt(np.sum(diff))
+                    networkx_graph2[edge[0]][edge[1]]['tension'] = tension
+
+                # Get high tension edges
+                high_tension_edges = [(node1, node2, attrs['tension']) for node1, node2, attrs in
+                                      networkx_graph2.edges(data=True)
+                                      if 'tension' in attrs and attrs['tension'] > tension_threshold]
+                sorted_ht_edges = sorted(high_tension_edges, key=lambda x: x[2], reverse=True)
+
+                # Break links
+                break_links = int(break_fraction * float(networkx_graph2.number_of_edges()))
+                broken_links = 0
+                for edge in sorted_ht_edges:
+                    if broken_links >= break_links:
+                        break
+                    if networkx_graph2.has_edge(*edge[:2]):
+                        networkx_graph2.remove_edge(*edge[:2])
+                        broken_links += 1
+
+                # Add links back randomly
+                complement = nx.complement(networkx_graph2)
+                non_edges = list(complement.edges())
+                edges_to_add = random.sample(non_edges, break_links)
+                for edge in edges_to_add:
+                    networkx_graph2.add_edge(*edge)
+
+                self.graph = networkx_graph2
+
+        actual_status = copy.deepcopy(self.status)
+
+        if self.actual_iteration == 0:
+            self.actual_iteration += 1
+
+            delta, node_count, status_delta = self.status_delta(self.status)
+            #print(delta, node_count, status_delta)
+            if node_status:
+                #print("what is the status here?", actual_status)
+                return {"iteration": 0, "status": actual_status,
+                        "node_count": node_count.copy(), "status_delta": status_delta.copy()}
+            else:
+                return {"iteration": 0, "status": {},
+                        "node_count": node_count.copy(), "status_delta": status_delta.copy()}
+
+        n = self.graph.number_of_nodes()
+
+
+        "Starting the coding block here that allows for link prediction to be on or off"
+
+        "Storing a version of the original graph to calibrate against"
+
+
+        if self.params['model']['link_prediction'] == "intervened":
+
+
+            if self.actual_iteration % 4 == 0:
+                    link_prediction(self, model, actual_status, break_fraction = 0.1)
+
+            #print("Are we reaching the intervened code at all?")
+
+            # if self.actual_iteration > 0:
+            #     link_predictor = model
+            #     networkx_graph = self.graph.copy()
+            #
+            #     for edge in self.graph.edges():
+            #         networkx_graph.add_edge(*edge)
+            #     for node in self.graph.nodes():
+            #         opinion = actual_status[node]
+            #         networkx_graph.add_node(node, opinion = opinion)
+            #
+            #
+            #     #number of links to break
+            #     break_links = int(0.1*float(networkx_graph.number_of_edges())) #change this later
+            #
+            #     #Converting to Pytorch Geometric format
+            #     data = from_networkx(networkx_graph)
+            #     data.x = data.opinion.to(device)
+            #
+            #     #breaking links
+            #     all_edges = list(networkx_graph.edges())
+            #     edges_to_remove = random.sample(all_edges, break_links)
+            #     networkx_graph.remove_edges_from(edges_to_remove)
+            #
+            #     data2 = from_networkx(networkx_graph)
+            #
+            #     edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph.edges())) / len(
+            #         set(self.original_graph.edges()))
+            #     print("Edge overlap after breaking:", np.round(edge_overlap,4),"number of edges", networkx_graph.number_of_edges())
+            #
+            #     #print("This is the shape of the full adjacency matrix", full_ad.shape, "average value", np.mean(full_ad))
+            #
+            #     num_nodes = data.num_nodes
+            #     num_neg_samples = data2.edge_index.shape[
+            #         1]  # Generate as many negative samples as there are positive edges
+            #
+            #
+            #     #print("What is data.edge_index?", data2.edge_index.shape, data2.edge_index)
+            #
+            #     # # Generate negative edges
+            #     # neg_edge_index = utils.negative_sampling(edge_index=data2.edge_index,
+            #     #                                          num_nodes=num_nodes,
+            #     #                                          num_neg_samples=1*num_neg_samples,
+            #     #                                          method="sparse",
+            #     #                                          force_undirected= True)
+            #
+            #     "testing how long it takes to run on the complement"
+            #
+            #     complement = nx.complement(networkx_graph)
+            #     #
+            #     neg_edge_index = complement.edges()
+            #     neg_edge_index = np.array(list(neg_edge_index)).T
+            #     neg_edge_index = torch.from_numpy(neg_edge_index).long()
+            #     # #print("how large is this thing?", neg_edge_index.shape)
+            #
+            #
+            #     #print("testing the neg_edge_index", neg_edge_index.shape, neg_edge_index)
+            #
+            #     # Concatenate positive and negative edges
+            #     #edge_label_index = torch.cat([data.edge_index, neg_edge_index], dim=1)
+            #
+            #
+            #     # Generating embeddings with trained model
+            #
+            #     with torch.no_grad():
+            #
+            #         z = model(data.x, data2.edge_index.to(device))
+            #
+            #         #print("what is z exactly?", z.shape)
+            #         #print("show me z", z)
+            #
+            #         # Calculate the link logits
+            #         link_logits = torch.cat(
+            #             [(z[edge[0]] * z[edge[1]]).sum(dim=-1).unsqueeze(0) for edge in neg_edge_index.t().tolist()],
+            #             dim=0)
+            #
+            #
+            #         edge_label_index_unflattened = neg_edge_index.t()
+            #
+            #         #print("this is the edge label index this should be source, dest",edge_label_index_unflattened)
+            #
+            #         # Apply sigmoid function to convert logits to probabilities
+            #         probabilities = torch.sigmoid(link_logits)
+            #
+            #         #print("what are these probabilities?", probabilities)
+            #
+            #     sorted_prob_indices = torch.argsort(probabilities, descending=True)
+            #
+            #     sorted_edges = edge_label_index_unflattened[sorted_prob_indices.cpu()]
+            #     #print("What are the sorted edges?", sorted_edges.shape)
+            #
+            #     # sorted_edges = sorted_edges
+            #     #
+            #     # "comparing overlap between sorted_edges and the existant edges"
+            #     #
+            #     # edge_list_test = networkx_graph.edges()
+            #     #
+            #     # edge_set1 = set(sorted_edges)
+            #     # edge_set2 = set(edge_list_test)
+            #     #
+            #     # common_edges = edge_set1.intersection(edge_set2)
+            #     # print("the common edges are", len(common_edges))
+            #
+            #
+            #
+            #
+            #     new_links_added = 0
+            #     link_index = 0
+            #
+            #     while new_links_added < break_links:
+            #         src, dest = sorted_edges[link_index]
+            #
+            #         if not networkx_graph.has_edge(src.item(), dest.item()):
+            #             networkx_graph.add_edge(src.item(), dest.item())
+            #             new_links_added += 1
+            #         link_index += 1
+            #
+            #     # potential_new_edges = [(i, j) for i in range(data.num_nodes) for j in range(i + 1, data.num_nodes)
+            #     #                        if not networkx_graph.has_edge(i, j)]
+            #     #
+            #     # edges_to_add = random.sample(potential_new_edges, break_links)
+            #     # networkx_graph.add_edges_from(edges_to_add)
+            #
+            #     edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph.edges())) / len(
+            #          set(self.original_graph.edges()))
+            #     print("Edge overlap after link prediction:", np.round(edge_overlap,4), "number of edges", networkx_graph.number_of_edges())
+            #
+            #     #print(networkx_graph)
+            #     self.graph = networkx_graph
+
             #print("Completed one loop of link prediction")
 
             #print(networkx_graph)
@@ -617,36 +805,84 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             pass
 
         if self.params['model']['link_prediction'] == "targeted":
-            print("entering the targeted code section")
-            "Looking at the edgelist and calculating difference metrics for entire array"
 
-            if self.actual_iteration > 0:
-                networkx_graph2 = self.graph.copy()
+            if self.actual_iteration % 4 == 0:
+                removal_protocol(self, model, actual_status, tension_threshold=1.0, break_fraction=0.1)
 
-                for edge in self.graph.edges():
-                    networkx_graph2.add_edge(*edge)
-                for node in self.graph.nodes():
-                    opinion = actual_status[node]
-                    networkx_graph2.add_node(node, opinion = opinion)
-
-            "introduction notion of tension: mean euclidean difference between two connected node opinions"
-
-            edge_tension = []
-            for edge in networkx_graph2.edges():
-                diff = [((actual_status[edge[0]][d] + 1) - (actual_status[edge[1]][d] + 1)) ** 2 for d in
-                        range(self.params['model']['dims'])]
-                tension = np.sqrt(np.sum(diff))
-                edge_tension.append((edge, tension))
-
-            # converting edge_tensions into an array
-
-            edge_tension_array = np.array(edge_tension, dtype= object)
-
-            print("What is the shape of this object?", edge_tension_array.shape)
-            print("what is the object itself?", edge_tension_array)
-
-
-            pass
+            # if self.params['model']['operation_mode'] == "ensemble":
+            #
+            # print("entering the targeted code section")
+            # "Looking at the edgelist and calculating difference metrics for entire array"
+            #
+            # if self.actual_iteration > 0:
+            #     networkx_graph2 = self.graph.copy()
+            #
+            #     for edge in self.graph.edges():
+            #         networkx_graph2.add_edge(*edge)
+            #     for node in self.graph.nodes():
+            #         opinion = actual_status[node]
+            #         networkx_graph2.add_node(node, opinion = opinion)
+            #
+            # "introduction notion of tension: mean euclidean difference between two connected node opinions"
+            #
+            # edge_tension = []
+            # for edge in networkx_graph2.edges():
+            #     diff = [((actual_status[edge[0]][d] + 1) - (actual_status[edge[1]][d] + 1)) ** 2 for d in
+            #             range(self.params['model']['dims'])]
+            #     tension = np.sqrt(np.sum(diff))
+            #     networkx_graph2[edge[0]][edge[1]]['tension'] = tension
+            #
+            #
+            # # creating a list of tensions that fall above the threshold.
+            #
+            # tension_threshold = 1.0
+            #
+            # high_tension_edges = [(node1, node2, attrs['tension']) for node1, node2, attrs in networkx_graph2.edges(data=True)
+            #                       if 'tension' in attrs and attrs['tension'] > tension_threshold]
+            #
+            #
+            # sorted_ht_edges = sorted(high_tension_edges, key=lambda x: x[2], reverse=True)
+            # print("how many high tension edges are there?", len(high_tension_edges))
+            #
+            # # number of links to break
+            # break_links = int(0.1 * float(networkx_graph2.number_of_edges()))  # change this later
+            #
+            # broken_links = 0
+            # broken_index = 0
+            #
+            #
+            # for edge in sorted_ht_edges:
+            #     if broken_links >= break_links:
+            #         break
+            #     if networkx_graph2.has_edge(*edge[:2]):
+            #         networkx_graph2.remove_edge(*edge[:2])
+            #
+            #         broken_links += 1
+            #         #print(broken_links)
+            #
+            # edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph2.edges())) / len(
+            #     set(self.original_graph.edges()))
+            # print("Edge overlap after breaking in targeted:", np.round(edge_overlap, 4), "number of edges",
+            #       networkx_graph2.number_of_edges())
+            #
+            #
+            #
+            # #reintroducing links at random
+            #
+            # complement = nx.complement(networkx_graph2)
+            # non_edges = list(complement.edges())
+            #
+            # edges_to_add = random.sample(non_edges, break_links)
+            #
+            # for edge in edges_to_add:
+            #     networkx_graph2.add_edge(*edge)
+            #
+            # edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph2.edges())) / len(
+            #     set(self.original_graph.edges()))
+            # print("Edge overlap after restoration in targeted:", np.round(edge_overlap, 4), "number of edges",
+            #       networkx_graph2.number_of_edges())
+            #
+            # self.graph = networkx_graph2
 
         else:
             #print("No legal intervention mode selected, exiting", self.params['model']['link_prediction'])

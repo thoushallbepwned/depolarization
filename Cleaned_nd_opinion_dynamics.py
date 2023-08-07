@@ -313,7 +313,7 @@ if __name__ == "__main__":
     dims = 4
 
     noise = ["noisy"]#,"noiseless"]
-    operation_list = ["ensemble"]#["sequential","softmax","ensemble", "bounded"]
+    operation_list = ["sequential"]#["sequential","softmax","ensemble", "bounded"]
     method_list = ["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
     intervention_status = ["natural", "intervened", "targeted"]#["natural", "intervened", "targeted"]
