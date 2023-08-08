@@ -123,6 +123,7 @@ def visualize_line_plot(metrics_results):
     metric_names = ['mean_polarization_before', 'mean_polarization_after', 'depolarization', 'net_depolarization']
 
     #print("this is metric_results", metrics_results)
+    plt.figure()
 
     fig, axs = plt.subplots(2, figsize=(10, 6 * 2))  # Set the number of plots to 2 because we have 2 metrics to plot
 
@@ -168,19 +169,22 @@ def visualize_line_plot(metrics_results):
         ax.legend()
 
     plt.show()
-
+    plt.close()
     return fig
 
 def visualize_histogram(results):
+
+    plt.figure()
     num_interventions = len(results)
 
-    fig, axes = plt.subplots(2, 2, figsize=(10, 8 * num_interventions))
+    fig, axes = plt.subplots(2, 2, figsize=(15, 8 * num_interventions))
     axes = axes.ravel()
 
 
     df_before = results["natural"]["df_before"]
     df_after_natural = results["natural"]["df_after"]
-    df_after_intervened = results["intervened"]["df_after"]
+    df_after_intervened = results["predicted"]["df_after"]
+    df_after_targeted = results["removal"]["df_after"]  # Added targeted
     polarization_before = results["natural"]["polarization_before"]
     polarization_after = results["natural"]["polarization_after"]
     config = results["natural"]["config"]
@@ -198,8 +202,10 @@ def visualize_histogram(results):
     for j, col in enumerate(df_before.columns):
         axes[j].hist(df_before[col], bins=20, alpha=0.5, label='Before Opinion Dynamics', color='blue')
         axes[j].hist(df_after_natural[col], bins=20, alpha=0.5, label='After Opinion Dynamics (Natural)', color='green')
-        axes[j].hist(df_after_intervened[col], bins=20, alpha=0.5, label='After Opinion Dynamics (Intervened)',
+        axes[j].hist(df_after_intervened[col], bins=20, alpha=0.5, label='After Opinion Dynamics (Predicted)',
                      color='red')
+        axes[j].hist(df_after_targeted[col], bins=20, alpha=0.5, label='After Opinion Dynamics (Removal)',
+                     color='yellow')  # Added targeted
         axes[j].set_title(f'Histogram for {col} with')
         axes[j].text(0.05, -0.2, f'P before: {polarization_before[j]:.2f}', transform=axes[j].transAxes, fontsize=10)
         axes[j].text(0.45, -0.2, f'P after: {polarization_after[j]:.2f}', transform=axes[j].transAxes, fontsize=10)
@@ -212,7 +218,8 @@ def visualize_histogram(results):
     plt.figtext(0.80, 0.01, f'Max Decrease: {max_decrease:.2f} in Dimension: {max_decrease_dim}', ha="center", fontsize=10, bbox={"facecolor": "lightgreen", "alpha": 0.5, "pad": 5})
 
     plt.subplots_adjust(hspace=0.4, wspace=0.4)
-
+    plt.show()
+    plt.close()
     return fig
 
 
@@ -309,14 +316,14 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
 
 
 if __name__ == "__main__":
-    interval = np.arange(0.40, 0.85, 0.2)
+    interval = np.arange(0.25, 0.80, 0.05)
     dims = 4
 
     noise = ["noisy"]#,"noiseless"]
     operation_list = ["sequential"]#["sequential","softmax","ensemble", "bounded"]
     method_list = ["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
-    intervention_status = ["natural", "intervened", "targeted"]#["natural", "intervened", "targeted"]
+    intervention_status = ["natural", "predicted", "removal"]#["natural", "intervened", "targeted"]
 
 
     for noise_mode in noise:
@@ -332,7 +339,7 @@ if __name__ == "__main__":
 
                     if __name__ == "__main__":
 
-                        metric_results = {"natural": [], "intervened": [], "targeted": []}
+                        metric_results = {"natural": [], "predicted": [], "removal": []}
                         for i in interval:
 
                             i = np.round(i, 2)
