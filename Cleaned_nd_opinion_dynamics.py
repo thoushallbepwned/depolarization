@@ -73,9 +73,9 @@ def configure_model(epsilon, mode, minority_fraction, d, operational_mode, dista
 
 def calculate_epochs(operational_mode, d):
     if operational_mode == "ensemble":
-        epochs = int(16/d)
+        epochs = int(8/d)
     else:
-        epochs = 16
+        epochs = 8
     return epochs
 
 def get_control_graph(iterations, g):
@@ -320,8 +320,8 @@ if __name__ == "__main__":
     dims = 4
 
     noise = ["noisy"]#,"noiseless"]
-    operation_list = ["sequential"]#["sequential","softmax","ensemble", "bounded"]
-    method_list = ["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
+    operation_list = ["sequential", "softmax","bounded"]
+    method_list = ["mean_euclidean", "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
     intervention_status = ["natural", "predicted", "removal"]#["natural", "intervened", "targeted"]
 

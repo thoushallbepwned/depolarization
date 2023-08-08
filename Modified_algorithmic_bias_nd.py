@@ -509,20 +509,20 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 #print("What is data.edge_index?", data2.edge_index.shape, data2.edge_index)
 
                 # # Generate negative edges
-                neg_edge_index = utils.negative_sampling(edge_index=data2.edge_index,
-                                                         num_nodes=num_nodes,
-                                                         num_neg_samples=1*num_neg_samples,
-                                                         method="sparse",
-                                                         force_undirected= True)
+                # neg_edge_index = utils.negative_sampling(edge_index=data2.edge_index,
+                #                                          num_nodes=num_nodes,
+                #                                          num_neg_samples=1*num_neg_samples,
+                #                                          method="sparse",
+                #                                          force_undirected= True)
 
                 "testing how long it takes to run on the complement"
 
-                # complement = nx.complement(networkx_graph)
-                # #
-                # neg_edge_index = complement.edges()
-                # neg_edge_index = np.array(list(neg_edge_index)).T
-                # neg_edge_index = torch.from_numpy(neg_edge_index).long()
-                # #print("how large is this thing?", neg_edge_index.shape)
+                complement = nx.complement(networkx_graph)
+                #
+                neg_edge_index = complement.edges()
+                neg_edge_index = np.array(list(neg_edge_index)).T
+                neg_edge_index = torch.from_numpy(neg_edge_index).long()
+                #print("how large is this thing?", neg_edge_index.shape)
 
 
                 #print("testing the neg_edge_index", neg_edge_index.shape, neg_edge_index)
