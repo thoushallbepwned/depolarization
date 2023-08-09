@@ -223,6 +223,89 @@ def visualize_histogram(results):
     return fig
 
 
+import matplotlib.pyplot as plt
+
+
+def visualize_natural_state_line_plot(data, operation_list):
+    """
+    Visualizes the polarization metrics for the natural state's first method across different operations in a 1x3 plot.
+
+    Args:
+    - data (dict): The dictionary containing the polarization metrics.
+    - operation_list (list): List of operations to visualize.
+
+    Returns:
+    - A line graph visualization.
+    """
+
+    def compute_advanced_metrics(metrics_results):
+        advanced_metrics = {}
+        for intervention, results in metrics_results.items():
+            epsilon_values = []
+            depolarizations = []
+            net_depolarizations = []
+
+            for i, result in enumerate(results[0]):
+                epsilon, metrics_array = result
+                epsilon_values.append(epsilon)
+
+                if i == 0:  # initial state
+                    polarization_before = metrics_array
+                    mean_polarization_before = np.mean(polarization_before)
+                else:  # 'polarization_after'
+                    polarization_after = metrics_array
+                    mean_polarization_after = np.mean(polarization_after)
+
+                    depolarization = 100 - (mean_polarization_after / mean_polarization_before) * 100
+                    polarization_decrease = polarization_before - polarization_after
+                    net_depolarization = np.sum(polarization_decrease)
+
+                    depolarizations.append(depolarization)
+                    net_depolarizations.append(net_depolarization)
+
+            advanced_metrics[intervention] = {
+                "epsilon_values": epsilon_values[1:],
+                "depolarizations": depolarizations,
+                "net_depolarizations": net_depolarizations
+            }
+
+        return advanced_metrics
+
+    advanced_metrics_results = compute_advanced_metrics(data)
+
+    fig, axes = plt.subplots(1, 3, figsize=(20, 6))  # 1x3 grid
+
+    for operation in operation_list:
+        x_axis = [entry[0] for entry in data[operation][0]]
+        natural_polarizations = [entry[1][0] for entry in data[operation][0]]
+
+        # Plotting natural polarizations
+        axes[0].plot(x_axis, natural_polarizations, marker='o', label=f'{operation}')
+
+        # Plotting depolarizations
+        axes[1].plot(advanced_metrics_results[operation]["epsilon_values"],
+                     advanced_metrics_results[operation]["depolarizations"], marker='x',
+                     label=f'{operation}')
+
+        # Plotting net depolarizations
+        axes[2].plot(advanced_metrics_results[operation]["epsilon_values"],
+                     advanced_metrics_results[operation]["net_depolarizations"], marker='s',
+                     label=f'{operation}')
+
+    # Setting titles, labels, and other aesthetics
+    titles = ['Natural State Polarization', 'Depolarization', 'Net Depolarization']
+    for i, ax in enumerate(axes):
+        ax.set_title(titles[i])
+        ax.set_xlabel('Epsilon value')
+        ax.legend()
+        ax.grid(True, which='both', linestyle='--', linewidth=0.5)
+
+    axes[0].set_ylabel('Polarization Metric')
+    plt.tight_layout()
+    plt.show()
+
+    return plt
+
 "Running the main simulation function"
 def run_simulation(distance_method, mode, epsilon, operational_mode, intervention_status):
 
@@ -316,43 +399,51 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
 
 
 if __name__ == "__main__":
-    interval = np.arange(0.25, 0.80, 0.05)
+    interval = np.arange(0.35, 0.75, 0.1)
     dims = 4
 
     noise = ["noisy"]#,"noiseless"]
     operation_list = ["sequential", "softmax","bounded"]
-    method_list = ["mean_euclidean", "strict_euclidean", "cosine", "size_cosine"]
+    method_list = ["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
     intervention_status = ["natural", "predicted", "removal"]#["natural", "intervened", "targeted"]
 
+    operation_results = {"sequential": [], "softmax": [], "bounded": []}
 
     for noise_mode in noise:
+
         for operation in tqdm.tqdm(operation_list):
             print(f"\nCurrently operating {operation} simulations\n")
             os.makedirs(f"images/{noise_mode}/{operation}", exist_ok=True)
+
             for method in tqdm.tqdm(method_list):
                 print(f"For {operation} mode running the {method} method\n")
                 os.makedirs(f"images/{noise_mode}/{operation}/{method}", exist_ok=True)
+
                 for seed in seeding_list:
                     print(f"seeding mode is {seed} for {operation} and {method}\n")
                     os.makedirs(f"images/{noise_mode}/{operation}/{method}/{seed}", exist_ok=True)
 
-                    if __name__ == "__main__":
+                    metric_results = {"natural": [], "predicted": [], "removal": []}
 
-                        metric_results = {"natural": [], "predicted": [], "removal": []}
-                        for i in interval:
+                    for i in interval:
 
-                            i = np.round(i, 2)
+                        i = np.round(i, 2)
 
-                            results, metric_results = run_simulation(method, seed, i, operation, intervention_status)
-                            fig = visualize_histogram(results)
-                            index = np.round(i, 2)
+                        results, metric_results = run_simulation(method, seed, i, operation, intervention_status)
+                        fig = visualize_histogram(results)
+                        index = np.round(i, 2)
 
-                            fig.savefig(
-                                f"images/{noise_mode}/{operation}/{method}/{seed}/fig1_{index}.png",
-                                dpi=fig.dpi)
-
-                        fig2 = visualize_line_plot(metric_results)
-                        fig2.savefig(
-                            f"images/{noise_mode}/{operation}/{method}/{seed}/fig2_{index}.png",
+                        fig.savefig(
+                            f"images/{noise_mode}/{operation}/{method}/{seed}/fig1_{index}.png",
                             dpi=fig.dpi)
+
+                    fig2 = visualize_line_plot(metric_results)
+                    fig2.savefig(
+                        f"images/{noise_mode}/{operation}/{method}/{seed}/fig2_{index}.png",
+                        dpi=fig.dpi)
+
+                    operation_results[operation].append(metric_results["natural"])
+                    print("inner loop", operation_results)
+                #print("outer loop", operation_results)
+        visualize_natural_state_line_plot(operation_results, operation_list)
