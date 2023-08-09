@@ -302,6 +302,7 @@ def visualize_natural_state_line_plot(data, operation_list):
 
     axes[0].set_ylabel('Polarization Metric')
     plt.tight_layout()
+    plt.suptitle("Natural polarization metrics across different operations")
     plt.show()
 
     return plt
@@ -399,16 +400,16 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
 
 
 if __name__ == "__main__":
-    interval = np.arange(0.35, 0.75, 0.1)
+    interval = np.arange(0.10, 0.90, 0.05)
     dims = 4
 
     noise = ["noisy"]#,"noiseless"]
-    operation_list = ["sequential", "softmax","bounded"]
+    operation_list = ["sequential", "softmax","bounded", "ensemble"]
     method_list = ["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
     intervention_status = ["natural", "predicted", "removal"]#["natural", "intervened", "targeted"]
 
-    operation_results = {"sequential": [], "softmax": [], "bounded": []}
+    operation_results = {"sequential": [], "softmax": [], "bounded": [], "ensemble": []}
 
     for noise_mode in noise:
 
@@ -431,19 +432,20 @@ if __name__ == "__main__":
                         i = np.round(i, 2)
 
                         results, metric_results = run_simulation(method, seed, i, operation, intervention_status)
-                        fig = visualize_histogram(results)
-                        index = np.round(i, 2)
+                    #     fig = visualize_histogram(results)
+                    #     index = np.round(i, 2)
+                    #
+                    #     fig.savefig(
+                    #         f"images/{noise_mode}/{operation}/{method}/{seed}/fig1_{index}.png",
+                    #         dpi=fig.dpi)
+                    #
+                    # fig2 = visualize_line_plot(metric_results)
+                    # fig2.savefig(
+                    #     f"images/{noise_mode}/{operation}/{method}/{seed}/fig2_{index}.png",
+                    #     dpi=fig.dpi)
 
-                        fig.savefig(
-                            f"images/{noise_mode}/{operation}/{method}/{seed}/fig1_{index}.png",
-                            dpi=fig.dpi)
-
-                    fig2 = visualize_line_plot(metric_results)
-                    fig2.savefig(
-                        f"images/{noise_mode}/{operation}/{method}/{seed}/fig2_{index}.png",
-                        dpi=fig.dpi)
-
-                    operation_results[operation].append(metric_results["natural"])
+                    operation_results[operation].append(metric_results["removal"])
                     print("inner loop", operation_results)
                 #print("outer loop", operation_results)
-        visualize_natural_state_line_plot(operation_results, operation_list)
+        fig3 = visualize_natural_state_line_plot(operation_results, operation_list)
+        fig3.savefig("natural_plot.png")

@@ -699,7 +699,6 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         if self.params['model']['link_prediction'] == "predicted":
             pass
-
             # if self.actual_iteration % 4 == 0:
             #         link_prediction(self, model, actual_status, break_fraction = 0.1)
 
@@ -708,10 +707,10 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             pass
 
         if self.params['model']['link_prediction'] == "removal":
-            pass
 
-            # if self.actual_iteration % 4 == 0:
-            #     removal_protocol(self, model, actual_status, tension_threshold=0.5, break_fraction=0.1)
+
+            if self.actual_iteration % 4 == 0:
+                removal_protocol(self, model, actual_status, tension_threshold=0.5, break_fraction=0.1)
 
         else:
             #print("No legal intervention mode selected, exiting", self.params['model']['link_prediction'])
