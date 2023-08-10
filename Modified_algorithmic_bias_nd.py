@@ -414,6 +414,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
     #         if s > 1 or s < 0:
     #             self.status[n] = 0
 
+
     @staticmethod
     def prob(distance, gamma, min_dist):
         if distance < min_dist:
@@ -421,16 +422,23 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         return np.power(distance, -gamma)
 
     def pb1(self, statuses, i_status):
-        dist = np.abs(statuses - i_status)
-        null = np.full(statuses.shape[0], 0.00001)
-        "Taking a cheat now by only selecting the first dimension"
-        if self.params['model']['dims'] > 1:
-            dist = dist[:, 0]
-        else:
-            dist = dist
-        max_base = np.maximum(dist, null)
-        dists = max_base ** -self.params['model']['gamma']
-        return dists
+        num_neighbors = len(statuses)
+        uniform_probabilities = np.full(num_neighbors, 1 / num_neighbors)
+        # dist = np.abs(statuses - i_status)
+        # null = np.full(statuses.shape[0], 0.00001)
+        # "Taking a cheat now by only selecting the first dimension"
+        # if self.params['model']['dims'] > 1:
+        #
+        #     if len(dist.shape) == 2:
+        #         dist = dist[:, 0]
+        #     else:
+        #         print("unexpected error at this entry", dist.shape, dist)
+        #         pass
+        # else:
+        #     dist = dist
+        # max_base = np.maximum(dist, null)
+        # dists = max_base ** -self.params['model']['gamma']
+        return uniform_probabilities
 
     def iteration(self, node_status=True):
         """
@@ -452,6 +460,35 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             e_x = np.exp(x - np.max(x))  # Subtracting the maximum value for numerical stability
             return e_x / e_x.sum()
 
+        def set_neighborhood_info(self):
+            # Logic to initialize or reset neighborhood data
+            max_edgees = (self.graph.number_of_nodes() * (self.graph.number_of_nodes() - 1)) / 2
+
+            def Extract(lst):
+                return [item[0] for item in lst]
+
+            if self.params['model']['dims'] == 1:
+                nids = np.array(list(self.status.items()))
+                self.ids = nids[:, 0]
+            else:
+                nids = list(self.status.items())
+                self.ids = Extract(nids)
+
+            if max_edgees == self.graph.number_of_edges():
+                self.sts = nids[:, 1]
+            else:
+                "Found the location where a bunch of things need to change"
+                for i in self.graph.nodes:
+                    if self.params['model']['dims'] == 1:
+                        i_neigh = list(self.graph.neighbors(i))
+                        i_ids = nids[:, 0][i_neigh]
+                        i_sts = nids[:, 1][i_neigh]
+                        self.node_data[i] = (i_ids, i_sts)
+                    else:
+                        i_neigh = list(self.graph.neighbors(i))
+                        i_ids = i_neigh
+                        i_sts = [tup[1] for tup in nids if tup[0] in i_neigh]
+                        self.node_data[i] = (i_ids, i_sts)
         def compute_tension(edge, actual_status, dims):
             """Helper function to compute tension of an edge."""
             diff = [((actual_status[edge[0]][d] + 1) - (actual_status[edge[1]][d] + 1)) ** 2 for d in range(dims)]
@@ -491,8 +528,18 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                 # breaking links
                 all_edges = list(networkx_graph.edges())
-                edges_to_remove = random.sample(all_edges, break_links)
-                networkx_graph.remove_edges_from(edges_to_remove)
+                random.shuffle(all_edges)
+
+                broken_links = 0
+                for edge in all_edges:
+                    if broken_links >= break_links:
+                        break
+                    node1, node2 =edge
+                    if networkx_graph.degree(node1) <= 1 or networkx_graph.degree(node2) <= 1:
+                        continue
+
+                    networkx_graph.remove_edge(node1, node2)
+                    broken_links += 1
 
                 data2 = from_networkx(networkx_graph)
 
@@ -509,20 +556,20 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 #print("What is data.edge_index?", data2.edge_index.shape, data2.edge_index)
 
                 # # Generate negative edges
-                # neg_edge_index = utils.negative_sampling(edge_index=data2.edge_index,
-                #                                          num_nodes=num_nodes,
-                #                                          num_neg_samples=1*num_neg_samples,
-                #                                          method="sparse",
-                #                                          force_undirected= True)
+                neg_edge_index = utils.negative_sampling(edge_index=data2.edge_index,
+                                                         num_nodes=num_nodes,
+                                                         num_neg_samples=10*num_neg_samples,
+                                                         method="sparse",
+                                                         force_undirected= True)
 
                 "testing how long it takes to run on the complement"
 
-                complement = nx.complement(networkx_graph)
-                #
-                neg_edge_index = complement.edges()
-                neg_edge_index = np.array(list(neg_edge_index)).T
-                neg_edge_index = torch.from_numpy(neg_edge_index).long()
-                #print("how large is this thing?", neg_edge_index.shape)
+                # complement = nx.complement(networkx_graph)
+                # #
+                # neg_edge_index = complement.edges()
+                # neg_edge_index = np.array(list(neg_edge_index)).T
+                # neg_edge_index = torch.from_numpy(neg_edge_index).long()
+                # #print("how large is this thing?", neg_edge_index.shape)
 
 
                 #print("testing the neg_edge_index", neg_edge_index.shape, neg_edge_index)
@@ -567,10 +614,12 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                      set(self.original_graph.edges()))
                 print("Edge overlap after link prediction:", np.round(edge_overlap,4), "number of edges", networkx_graph.number_of_edges())
 
-                self.graph = networkx_graph
+                networkx_graph
+
+                return networkx_graph
 
 
-        def removal_protocol(self, model, actual_status, tension_threshold, break_fraction):
+        def removal_protocol(self, model, actual_status, break_fraction):
             if self.actual_iteration > 0:
                 networkx_graph2 = self.graph.copy()
 
@@ -609,8 +658,13 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 for edge in sorted_ht_edges:
                     if broken_links >= break_links:
                         break
-                    if networkx_graph2.has_edge(*edge[:2]):
-                        networkx_graph2.remove_edge(*edge[:2])
+
+                    node1, node2 = edge[:2]
+                    if (networkx_graph2.degree(node1) <= 1 or networkx_graph2.degree(node2) <= 1):
+                        continue
+
+                    if networkx_graph2.has_edge(node1, node2):
+                        networkx_graph2.remove_edge(node1, node2)
                         broken_links += 1
 
                 #
@@ -674,7 +728,9 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 print("Edge overlap after restoration in targeted:", np.round(edge_overlap, 4), "number of edges",
                       networkx_graph2.number_of_edges())
 
-                self.graph = networkx_graph2
+
+                return networkx_graph2
+                #self.graph = networkx_graph2
 
         actual_status = copy.deepcopy(self.status)
 
@@ -699,8 +755,10 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         if self.params['model']['link_prediction'] == "predicted":
             pass
-            # if self.actual_iteration % 4 == 0:
-            #         link_prediction(self, model, actual_status, break_fraction = 0.1)
+            if self.actual_iteration  == 2:
+                graph = link_prediction(self, model, actual_status, break_fraction = 0.15)
+                self.graph = graph
+                set_neighborhood_info(self)
 
         if self.params['model']['link_prediction'] == "natural":
             #print(f"We are entering natural loop for iteration {self.actual_iteration}")
@@ -708,9 +766,10 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         if self.params['model']['link_prediction'] == "removal":
 
-
-            if self.actual_iteration % 4 == 0:
-                removal_protocol(self, model, actual_status, tension_threshold=0.5, break_fraction=0.1)
+            if self.actual_iteration  == 2:
+                graph = removal_protocol(self, model, actual_status, break_fraction=0.15)
+                self.graph = graph
+                set_neighborhood_info(self)
 
         else:
             #print("No legal intervention mode selected, exiting", self.params['model']['link_prediction'])
@@ -735,6 +794,8 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 neigh_ids = self.node_data[n1][0]
                 neigh_sts = np.array([actual_status[id] for id in neigh_ids])
 
+                #print("what are the neigh_ids", len(neigh_ids), neigh_ids)
+
             # selecting the node based on neighbors' status = self.node_data[n1][1]
             # using neighbor_status and actual_status[n1] as parameters
             # If we use self.status[n1] we get the previous iteration but not updated
@@ -747,10 +808,10 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             if self.params['model']['dims'] == 1:
                 selection_prob = self.pb1(neigh_sts, actual_status[n1])
             else:
-                selection_prob = self.pb1(neigh_sts, actual_status[n1][0])
+                selection_prob = self.pb1(neigh_sts, actual_status[n1])
 
-            total = np.sum(selection_prob)
-            selection_prob = selection_prob / total
+            r = np.random.random_sample()
+            #selection_prob = selection_prob / total
             cumulative_selection_probability = np.cumsum(selection_prob)
 
             r = np.random.random_sample()
