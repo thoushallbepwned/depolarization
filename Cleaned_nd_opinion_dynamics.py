@@ -448,4 +448,4 @@ if __name__ == "__main__":
                     print("inner loop", operation_results)
                 #print("outer loop", operation_results)
         fig3 = visualize_natural_state_line_plot(operation_results, operation_list)
-        fig3.savefig("natural_plot.png")
+        fig3.savefig("natural_plot_test.png")
