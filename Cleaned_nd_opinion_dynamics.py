@@ -464,3 +464,6 @@ if __name__ == "__main__":
         visualize_natural_state_line_plot(operation_results_nat, operation_list, "Natural")
         visualize_natural_state_line_plot(operation_results_rem, operation_list, "Removal")
         visualize_natural_state_line_plot(operation_results_pred, operation_list, "Predicted")
+
+
+        "test"
