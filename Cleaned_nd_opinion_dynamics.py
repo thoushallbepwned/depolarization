@@ -237,7 +237,7 @@ def visualize_natural_state_line_plot(data, operation_list, title):
     Returns:
     - A line graph visualization.
     """
-
+    print("visualizing now")
     def compute_advanced_metrics(metrics_results):
         advanced_metrics = {}
         for intervention, results in metrics_results.items():
@@ -280,6 +280,7 @@ def visualize_natural_state_line_plot(data, operation_list, title):
 
     fig, axes = plt.subplots(2, 2, figsize=(18, 12))  # 2x2 grid due to the new metric
 
+    fig.suptitle(f"Metrics collected for {title} mode", fontsize=20)
     for operation in operation_list:
         x_axis = [entry[0] for entry in data[operation][0]]
         natural_polarizations = [sum(entry[1]) for entry in data[operation][0]]  # Sum of all elements in the array
@@ -304,7 +305,7 @@ def visualize_natural_state_line_plot(data, operation_list, title):
 
 
     # Setting titles, labels, and other aesthetics
-    titles = [f'{title} State Polarization', 'Depolarization', 'Net Depolarization', 'Max Contribution %']
+    titles = [f'{title} State Polarization', '% Depolarization', 'Net Depolarization', 'Max Contribution %']
     for i, ax in enumerate(axes.ravel()):  # .ravel() flattens the 2x2 array to a 1D array for iteration
         ax.set_title(titles[i], fontsize=16)
         ax.set_xlabel('Epsilon value', fontsize=14)
@@ -314,7 +315,9 @@ def visualize_natural_state_line_plot(data, operation_list, title):
     plt.tight_layout(pad=3.0)
     plt.show()
 
-"Running the main simulation function"
+    return fig
+
+
 def run_simulation(distance_method, mode, epsilon, operational_mode, intervention_status):
 
     results = {}
@@ -412,13 +415,17 @@ if __name__ == "__main__":
 
     noise = ["noisy"]#,"noiseless"]
     operation_list = ["sequential", "softmax","bounded", "ensemble"]
-    method_list = ["size_cosine"]#["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
+    method_list = ["strict_euclidean"]#["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
-    intervention_status = ["natural", "predicted", "removal"]#["natural", "intervened", "targeted"]
+    intervention_status = ["natural", "predicted", "high-removal", "low-removal"]#["natural", "intervened", "targeted"]
 
     operation_results_nat = {"sequential": [], "softmax": [], "bounded": [], "ensemble": []}
     operation_results_pred = {"sequential": [], "softmax": [], "bounded": [], "ensemble": []}
-    operation_results_rem = {"sequential": [], "softmax": [], "bounded": [], "ensemble": []}
+    operation_results_Hrem = {"sequential": [], "softmax": [], "bounded": [], "ensemble": []}
+    operation_results_Lrem = {"sequential": [], "softmax": [], "bounded": [], "ensemble": []}
+
+    def subtract_arrays(array1, array2):
+        return array1 - array2
 
     for noise_mode in noise:
 
@@ -434,7 +441,7 @@ if __name__ == "__main__":
                     print(f"seeding mode is {seed} for {operation} and {method}\n")
                     os.makedirs(f"images/{noise_mode}/{operation}/{method}/{seed}", exist_ok=True)
 
-                    metric_results = {"natural": [], "predicted": [], "removal": []}
+                    metric_results = {"natural": [], "predicted": [], "high-removal": [], "low-removal": []}
 
                     for i in interval:
 
@@ -455,15 +462,57 @@ if __name__ == "__main__":
 
                     operation_results_nat[operation].append(metric_results["natural"])
                     operation_results_pred[operation].append(metric_results["predicted"])
-                    operation_results_rem[operation].append(metric_results["removal"])
+                    operation_results_Hrem[operation].append(metric_results["high-removal"])
+                    operation_results_Lrem[operation].append(metric_results["low-removal"])
 
                     print(operation_results_nat)
-                    print(operation_results_rem)
+                    print(operation_results_Lrem)
+
+        # Compute the delta values
+        delta_Hrem = {}
+        delta_Lrem = {}
+
+        for operation in operation_list:
+            nat_data = operation_results_nat[operation][0]
+            hrem_data = operation_results_Hrem[operation][0]
+            lrem_data = operation_results_Lrem[operation][0]
+
+            # Note the order of subtraction: hrem_arr - nat_arr and lrem_arr - nat_arr
+            delta_Hrem_data = [(eps, subtract_arrays(hrem_arr, nat_arr)) for (eps, nat_arr), (_, hrem_arr) in
+                               zip(nat_data, hrem_data)]
+            delta_Lrem_data = [(eps, subtract_arrays(lrem_arr, nat_arr)) for (eps, nat_arr), (_, lrem_arr) in
+                               zip(nat_data, lrem_data)]
+
+            delta_Hrem[operation] = [delta_Hrem_data]
+            delta_Lrem[operation] = [delta_Lrem_data]
+
+        # Visualize the delta values
+        fig7 = visualize_natural_state_line_plot(delta_Hrem, operation_list, "Delta High Removal")
+        fig8 = visualize_natural_state_line_plot(delta_Lrem, operation_list, "Delta Low Removal")
 
                 #print("outer loop", operation_results)
-        visualize_natural_state_line_plot(operation_results_nat, operation_list, "Natural")
-        visualize_natural_state_line_plot(operation_results_rem, operation_list, "Removal")
-        visualize_natural_state_line_plot(operation_results_pred, operation_list, "Predicted")
+        fig3 = visualize_natural_state_line_plot(operation_results_nat, operation_list, "Natural")
+        fig4 = visualize_natural_state_line_plot(operation_results_Hrem, operation_list, "High Removal")
+        fig5 = visualize_natural_state_line_plot(operation_results_pred, operation_list, "Predicted")
+        fig6 = visualize_natural_state_line_plot(operation_results_Lrem, operation_list, "Low Removal")
 
+        fig3.savefig(
+            f"polarization logs/{method}_natural_state.png",
+            dpi=fig3.dpi)
+        fig4.savefig(
+            f"polarization logs/{method}_high_removal.png",
+            dpi=fig4.dpi)
+        fig5.savefig(
+            f"polarization logs/{method}_predicted_state.png",
+            dpi=fig5.dpi)
+        fig6.savefig(
+            f"polarization logs/{method}_low_removal.png",
+            dpi=fig6.dpi)
 
-        "test"
+        fig7.savefig(
+            f"polarization logs/{method}_delta_high_removal.png",
+            dpi=fig7.dpi)
+        fig8.savefig(
+            f"polarization logs/{method}_delta_low_removal.png",
+            dpi=fig8.dpi)
+

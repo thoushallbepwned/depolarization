@@ -63,7 +63,8 @@ device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 """ Loading the link predictor to prepare for incorporation"""
 model = GraphSAGE(4, 32).to(device)
 model.load_state_dict(
-    torch.load("predictors_new/predictor_2000_nodes_sequential_mean_clean.pth"))
+    torch.load("predictors/predictor_2000_nodes_bounded_mean_model_0.6.pth"))
+    #torch.load("predictors_new/predictor_2000_nodes_sequential_mean_clean.pth"))
 model.eval()
 
 class AlgorithmicBiasModel_nd(DiffusionModel):
@@ -619,7 +620,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 return networkx_graph
 
 
-        def removal_protocol(self, model, actual_status, break_fraction):
+        def removal_protocol(self, model, actual_status, break_fraction, direction):
             if self.actual_iteration > 0:
                 networkx_graph2 = self.graph.copy()
 
@@ -639,33 +640,63 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 tensions = [data['tension'] for _, _, data in networkx_graph2.edges(data=True)]
                 average_tension = sum(tensions) / len(tensions)
 
-                tension_threshold =np.percentile(tensions, (1-break_fraction)*100)
-                print("Tension threshold:", tension_threshold)
 
-                print("Average tension in the network before removal:", average_tension)
+                if direction == "high":
+                    tension_threshold =np.percentile(tensions, (1-break_fraction)*100)
+                    print("Tension threshold:", tension_threshold)
 
-                # Get high tension edges
-                high_tension_edges = [(node1, node2, attrs['tension']) for node1, node2, attrs in
-                                      networkx_graph2.edges(data=True)
-                                      if 'tension' in attrs and attrs['tension'] > tension_threshold]
-                sorted_ht_edges = sorted(high_tension_edges, key=lambda x: x[2], reverse=True)
+                    print("Average tension in the network before removal:", average_tension)
 
-                # Break links
-                break_links = int(break_fraction * float(networkx_graph2.number_of_edges()))
-                broken_links = 0
+                    # Get high tension edges
+                    high_tension_edges = [(node1, node2, attrs['tension']) for node1, node2, attrs in
+                                          networkx_graph2.edges(data=True)
+                                          if 'tension' in attrs and attrs['tension'] > tension_threshold]
+                    sorted_ht_edges = sorted(high_tension_edges, key=lambda x: x[2], reverse=True)
+
+                    # Break links
+                    break_links = int(break_fraction * float(networkx_graph2.number_of_edges()))
+                    broken_links = 0
 
 
-                for edge in sorted_ht_edges:
-                    if broken_links >= break_links:
-                        break
+                    for edge in sorted_ht_edges:
+                        if broken_links >= break_links:
+                            break
 
-                    node1, node2 = edge[:2]
-                    if (networkx_graph2.degree(node1) <= 1 or networkx_graph2.degree(node2) <= 1):
-                        continue
+                        node1, node2 = edge[:2]
+                        if (networkx_graph2.degree(node1) <= 1 or networkx_graph2.degree(node2) <= 1):
+                            continue
 
-                    if networkx_graph2.has_edge(node1, node2):
-                        networkx_graph2.remove_edge(node1, node2)
-                        broken_links += 1
+                        if networkx_graph2.has_edge(node1, node2):
+                            networkx_graph2.remove_edge(node1, node2)
+                            broken_links += 1
+
+                if direction == "low":
+                    tension_threshold = np.percentile(tensions, (break_fraction) * 100)
+                    print("Tension threshold:", tension_threshold)
+
+                    print("Average tension in the network before removal:", average_tension)
+
+                    # Get high tension edges
+                    high_tension_edges = [(node1, node2, attrs['tension']) for node1, node2, attrs in
+                                          networkx_graph2.edges(data=True)
+                                          if 'tension' in attrs and attrs['tension'] < tension_threshold]
+                    sorted_ht_edges = sorted(high_tension_edges, key=lambda x: x[2], reverse=False)
+
+                    # Break links
+                    break_links = int(break_fraction * float(networkx_graph2.number_of_edges()))
+                    broken_links = 0
+
+                    for edge in sorted_ht_edges:
+                        if broken_links >= break_links:
+                            break
+
+                        node1, node2 = edge[:2]
+                        if (networkx_graph2.degree(node1) <= 1 or networkx_graph2.degree(node2) <= 1):
+                            continue
+
+                        if networkx_graph2.has_edge(node1, node2):
+                            networkx_graph2.remove_edge(node1, node2)
+                            broken_links += 1
 
                 #
                 edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph2.edges())) / len(
@@ -693,11 +724,17 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                 random.shuffle(non_edges)
 
+
+
+
                 edges_added = 0
                 #edges_to_add = random.sample(non_edges, break_links)
                 for edge in non_edges:
                     tension = compute_tension(edge, actual_status, self.params['model']['dims'])
-                    if tension < tension_threshold and edges_added < break_links:
+                    if tension < tension_threshold and edges_added < break_links and direction == "high":
+                        networkx_graph2.add_edge(*edge)
+                        edges_added += 1
+                    if tension > tension_threshold and edges_added < break_links and direction == "low":
                         networkx_graph2.add_edge(*edge)
                         edges_added += 1
                     if edges_added >= break_links:
@@ -755,22 +792,39 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         if self.params['model']['link_prediction'] == "predicted":
             pass
-            if self.actual_iteration  == 2:
-                graph = link_prediction(self, model, actual_status, break_fraction = 0.15)
-                self.graph = graph
-                set_neighborhood_info(self)
+            # if self.actual_iteration  == 2 and self.params['model']['operation_mode'] != "ensemble":
+            #     graph = link_prediction(self, model, actual_status, break_fraction = 0.15)
+            #     self.graph = graph
+            #     set_neighborhood_info(self)
+            # if if self.params['model']['operation_mode'] == "ensemble" and self.actual_iteration == 1:
+            #     graph = link_prediction(self, model, actual_status, break_fraction=0.15)
+            #     self.graph = graph
+            #     set_neighborhood_info(self)
 
         if self.params['model']['link_prediction'] == "natural":
             #print(f"We are entering natural loop for iteration {self.actual_iteration}")
             pass
 
-        if self.params['model']['link_prediction'] == "removal":
+        if self.params['model']['link_prediction'] == "high-removal":
 
-            if self.actual_iteration  == 2:
-                graph = removal_protocol(self, model, actual_status, break_fraction=0.15)
+            if self.actual_iteration == 2 and self.params['model']['operation_mode'] != "ensemble":
+                graph = removal_protocol(self, model, actual_status, break_fraction=0.15, direction = "high")
                 self.graph = graph
                 set_neighborhood_info(self)
+            if self.params['model']['operation_mode'] == "ensemble" and self.actual_iteration == 1:
+                graph = removal_protocol(self, model, actual_status, break_fraction=0.15, direction = "high")
+                self.graph = graph
+                set_neighborhood_info(self)
+        if self.params['model']['link_prediction'] == "low-removal":
 
+            if self.actual_iteration == 2 and self.params['model']['operation_mode'] != "ensemble":
+                graph = removal_protocol(self, model, actual_status, break_fraction=0.15, direction="low")
+                self.graph = graph
+                set_neighborhood_info(self)
+            if self.params['model']['operation_mode'] == "ensemble" and self.actual_iteration == 1:
+                graph = removal_protocol(self, model, actual_status, break_fraction=0.15, direction="low")
+                self.graph = graph
+                set_neighborhood_info(self)
         else:
             #print("No legal intervention mode selected, exiting", self.params['model']['link_prediction'])
             pass
