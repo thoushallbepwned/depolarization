@@ -643,9 +643,9 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                 if direction == "high":
                     tension_threshold =np.percentile(tensions, (1-break_fraction)*100)
-                    print("Tension threshold:", tension_threshold)
+                    #print("Tension threshold:", tension_threshold)
 
-                    print("Average tension in the network before removal:", average_tension)
+                    #print("Average tension in the network before removal:", average_tension)
 
                     # Get high tension edges
                     high_tension_edges = [(node1, node2, attrs['tension']) for node1, node2, attrs in
@@ -672,9 +672,9 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                 if direction == "low":
                     tension_threshold = np.percentile(tensions, (break_fraction) * 100)
-                    print("Tension threshold:", tension_threshold)
+                    #print("Tension threshold:", tension_threshold)
 
-                    print("Average tension in the network before removal:", average_tension)
+                    #print("Average tension in the network before removal:", average_tension)
 
                     # Get high tension edges
                     high_tension_edges = [(node1, node2, attrs['tension']) for node1, node2, attrs in
@@ -699,10 +699,10 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                             broken_links += 1
 
                 #
-                edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph2.edges())) / len(
-                    set(self.original_graph.edges()))
-                print("Edge overlap after breaking in targeted:", np.round(edge_overlap, 4), "number of edges",
-                      networkx_graph2.number_of_edges())
+                #edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph2.edges())) / len(
+                #    set(self.original_graph.edges()))
+                #print("Edge overlap after breaking in targeted:", np.round(edge_overlap, 4), "number of edges",
+                #      networkx_graph2.number_of_edges())
 
                 tensions = [data['tension'] for _, _, data in networkx_graph2.edges(data=True)]
                 average_tension = sum(tensions) / len(tensions)
@@ -715,7 +715,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 # plt.show()
                 # plt.close()
 
-                print("Average tension in the network after removal:", average_tension)
+                #print("Average tension in the network after removal:", average_tension)
 
 
                 # Add links back randomly
@@ -750,7 +750,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 tensions = [data['tension'] for _, _, data in networkx_graph2.edges(data=True)]
                 average_tension = sum(tensions) / len(tensions)
 
-                print("average tension after restorations:", average_tension)
+                #print("average tension after restorations:", average_tension)
 
                 # # Plotting the histogram
                 # plt.hist(tensions, bins=30, edgecolor='black', alpha=0.7)
@@ -762,8 +762,8 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
                 edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph2.edges())) / len(
                     set(self.original_graph.edges()))
-                print("Edge overlap after restoration in targeted:", np.round(edge_overlap, 4), "number of edges",
-                      networkx_graph2.number_of_edges())
+                #print("Edge overlap after restoration in targeted:", np.round(edge_overlap, 4), "number of edges",
+                #      networkx_graph2.number_of_edges())
 
 
                 return networkx_graph2
@@ -792,11 +792,11 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         if self.params['model']['link_prediction'] == "predicted":
             pass
-            # if self.actual_iteration  == 2 and self.params['model']['operation_mode'] != "ensemble":
+            # if self.actual_iteration  == 2 and self.params['model']['operational_mode'] != "ensemble":
             #     graph = link_prediction(self, model, actual_status, break_fraction = 0.15)
             #     self.graph = graph
             #     set_neighborhood_info(self)
-            # if if self.params['model']['operation_mode'] == "ensemble" and self.actual_iteration == 1:
+            # if if self.params['model']['operational_mode'] == "ensemble" and self.actual_iteration == 1:
             #     graph = link_prediction(self, model, actual_status, break_fraction=0.15)
             #     self.graph = graph
             #     set_neighborhood_info(self)
@@ -807,21 +807,21 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         if self.params['model']['link_prediction'] == "high-removal":
 
-            if self.actual_iteration == 2 and self.params['model']['operation_mode'] != "ensemble":
+            if self.actual_iteration == 2 and self.params['model']['operational_mode'] != "ensemble":
                 graph = removal_protocol(self, model, actual_status, break_fraction=0.15, direction = "high")
                 self.graph = graph
                 set_neighborhood_info(self)
-            if self.params['model']['operation_mode'] == "ensemble" and self.actual_iteration == 1:
+            if self.params['model']['operational_mode'] == "ensemble" and self.actual_iteration == 1:
                 graph = removal_protocol(self, model, actual_status, break_fraction=0.15, direction = "high")
                 self.graph = graph
                 set_neighborhood_info(self)
         if self.params['model']['link_prediction'] == "low-removal":
 
-            if self.actual_iteration == 2 and self.params['model']['operation_mode'] != "ensemble":
+            if self.actual_iteration == 2 and self.params['model']['operational_mode'] != "ensemble":
                 graph = removal_protocol(self, model, actual_status, break_fraction=0.15, direction="low")
                 self.graph = graph
                 set_neighborhood_info(self)
-            if self.params['model']['operation_mode'] == "ensemble" and self.actual_iteration == 1:
+            if self.params['model']['operational_mode'] == "ensemble" and self.actual_iteration == 1:
                 graph = removal_protocol(self, model, actual_status, break_fraction=0.15, direction="low")
                 self.graph = graph
                 set_neighborhood_info(self)

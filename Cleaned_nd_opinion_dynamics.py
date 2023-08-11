@@ -259,7 +259,7 @@ def visualize_natural_state_line_plot(data, operation_list, title):
 
                     depolarization = 100 - (mean_polarization_after / mean_polarization_before) * 100
                     polarization_decrease = polarization_before - polarization_after
-                    net_depolarization = np.sum(polarization_decrease)
+                    net_depolarization = np.mean(polarization_decrease)
 
                     max_contribution = max(polarization_after) / np.sum(polarization_after) * 100
                     max_contributions.append(max_contribution)
@@ -305,7 +305,7 @@ def visualize_natural_state_line_plot(data, operation_list, title):
 
 
     # Setting titles, labels, and other aesthetics
-    titles = [f'{title} State Polarization', '% Depolarization', 'Net Depolarization', 'Max Contribution %']
+    titles = [f'{title} State Polarization', '% Depolarization', 'Mean Depolarization', 'Max Contribution %']
     for i, ax in enumerate(axes.ravel()):  # .ravel() flattens the 2x2 array to a 1D array for iteration
         ax.set_title(titles[i], fontsize=16)
         ax.set_xlabel('Epsilon value', fontsize=14)
@@ -333,7 +333,7 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
 
     for intervention in intervention_status:
 
-        print("running in intervention mode: ", intervention)
+        #print("running in intervention mode: ", intervention)
 
 
         # Generating graph
@@ -415,7 +415,7 @@ if __name__ == "__main__":
 
     noise = ["noisy"]#,"noiseless"]
     operation_list = ["sequential", "softmax","bounded", "ensemble"]
-    method_list = ["strict_euclidean"]#["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
+    method_list = ["cosine"]#, "size_cosine"]#["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
     intervention_status = ["natural", "predicted", "high-removal", "low-removal"]#["natural", "intervened", "targeted"]
 
@@ -444,7 +444,7 @@ if __name__ == "__main__":
                     metric_results = {"natural": [], "predicted": [], "high-removal": [], "low-removal": []}
 
                     for i in interval:
-
+                        print("Currently running epsilon: ", i)
                         i = np.round(i, 2)
 
                         results, metric_results = run_simulation(method, seed, i, operation, intervention_status)
