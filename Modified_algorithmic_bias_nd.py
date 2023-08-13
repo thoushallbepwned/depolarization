@@ -889,8 +889,12 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
             if self.params['model']['distance_method'] == 'mean_euclidean':
                 if self.params['model']['dims'] > 1:
-                    diff = [abs((actual_status[n1][d]+2) - (actual_status[n2][d]+2)) for d in range(self.params['model']['dims'])]
-                    diff = np.mean(diff)
+                    diff = [(actual_status[n1][d] + 2) - (actual_status[n2][d] + 2) for d in
+                            range(self.params['model']['dims'])]
+                    diff = np.sqrt(np.sum(np.square(diff)))
+
+                    #diff = [abs((actual_status[n1][d]+2) - (actual_status[n2][d]+2)) for d in range(self.params['model']['dims'])]
+                    #diff = np.mean(diff)
                 else:
                     diff  = np.abs((actual_status[n1]+2) - (actual_status[n2]+2))
 
@@ -921,6 +925,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 else:
 
                     diff = np.dot(actual_status[n1], actual_status[n2])/ (np.linalg.norm(actual_status[n1]) * np.linalg.norm(actual_status[n2]))
+                    diff =  1- ((diff +1)/2)
                     #print(diff)
 
 
@@ -933,9 +938,16 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     diff = np.abs((actual_status[n1] + 2) - (actual_status[n2] + 2))
                 else:
                     "Taking the biggest vector"
-                    cosine_sim = np.dot(actual_status[n1], actual_status[n2])#/ (np.linalg.norm(actual_status[n1]) * np.linalg.norm(actual_status[n2]))
-                    #euclidean_dist = euclidean(actual_status[n1], actual_status[n2])
-                    diff = (cosine_sim)
+                    cosine_sim = np.dot(actual_status[n1], actual_status[n2])/ (np.linalg.norm(actual_status[n1])
+                                                                                * np.linalg.norm(actual_status[n2]))
+
+
+                    size_diff = [(actual_status[n1][d] + 2) - (actual_status[n2][d] + 2) for d in
+                            range(self.params['model']['dims'])]
+                    size_diff = np.sqrt(np.sum(np.square(size_diff)))/np.sqrt(self.params['model']['dims']* np.square(self.params['model']['epsilon']))
+
+                    diff =  (0.6*size_diff + 0.4*(1- (cosine_sim+1)/2))/2
+
                     #print("this is the diff:", diff)
 
 
@@ -952,17 +964,19 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 else:
                     allowance = False
             elif self.params['model']['distance_method'] == 'cosine':
-                if diff < cos_epsilon:
+                if diff < self.params['model']['epsilon']:
                     allowance = True
                 else:
                     allowance = False
             elif self.params['model']['distance_method'] == 'size_cosine':
-                if diff < cos_epsilon:
+                if diff < self.params['model']['epsilon']:
                     allowance = True
                 else:
                     allowance = False
             elif self.params['model']['distance_method'] == 'mean_euclidean':
-                if diff < self.params['model']['epsilon']:
+
+                distance = np.sqrt(self.params['model']['dims']* np.square(self.params['model']['epsilon']))
+                if diff < distance:
                     allowance = True
                 else:
                     allowance = False

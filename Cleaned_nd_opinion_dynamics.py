@@ -413,9 +413,9 @@ if __name__ == "__main__":
     interval = np.arange(0.10, 0.90, 0.05)
     dims = 4
 
-    noise = ["noisy"]#,"noiseless"]
+    noise = ["noiseless"]#["noisy"]#,"noiseless"]
     operation_list = ["sequential", "softmax","bounded", "ensemble"]
-    method_list = ["cosine"]#, "size_cosine"]#["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
+    method_list = ["size_cosine"]#, "size_cosine"]#["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
     intervention_status = ["natural", "predicted", "high-removal", "low-removal"]#["natural", "intervened", "targeted"]
 
@@ -444,8 +444,9 @@ if __name__ == "__main__":
                     metric_results = {"natural": [], "predicted": [], "high-removal": [], "low-removal": []}
 
                     for i in interval:
-                        print("Currently running epsilon: ", i)
+
                         i = np.round(i, 2)
+                        print("Currently running epsilon: ", i)
 
                         results, metric_results = run_simulation(method, seed, i, operation, intervention_status)
                     #     fig = visualize_histogram(results)
@@ -497,7 +498,7 @@ if __name__ == "__main__":
         fig6 = visualize_natural_state_line_plot(operation_results_Lrem, operation_list, "Low Removal")
 
         fig3.savefig(
-            f"polarization logs/{method}_natural_state.png",
+            f"polarization logs/{method}_medium_state.png",
             dpi=fig3.dpi)
         fig4.savefig(
             f"polarization logs/{method}_high_removal.png",
