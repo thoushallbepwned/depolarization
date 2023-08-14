@@ -542,78 +542,84 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     networkx_graph.remove_edge(node1, node2)
                     broken_links += 1
 
-                data2 = from_networkx(networkx_graph)
-
-                edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph.edges())) / len(
-                    set(self.original_graph.edges()))
-                print("Edge overlap after breaking:", np.round(edge_overlap, 4), "number of edges",
-                      networkx_graph.number_of_edges())
-
-                num_nodes = data.num_nodes
-                num_neg_samples = data2.edge_index.shape[
-                    1]  # Generate as many negative samples as there are positive edges
-
-
-                #print("What is data.edge_index?", data2.edge_index.shape, data2.edge_index)
-
-                # # Generate negative edges
-                neg_edge_index = utils.negative_sampling(edge_index=data2.edge_index,
-                                                         num_nodes=num_nodes,
-                                                         num_neg_samples=10*num_neg_samples,
-                                                         method="sparse",
-                                                         force_undirected= True)
-
-                "testing how long it takes to run on the complement"
-
-                # complement = nx.complement(networkx_graph)
+                # data2 = from_networkx(networkx_graph)
+                #
+                # edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph.edges())) / len(
+                #     set(self.original_graph.edges()))
+                # print("Edge overlap after breaking:", np.round(edge_overlap, 4), "number of edges",
+                #       networkx_graph.number_of_edges())
+                #
+                # num_nodes = data.num_nodes
+                # num_neg_samples = data2.edge_index.shape[
+                #     1]  # Generate as many negative samples as there are positive edges
+                #
+                #
+                # #print("What is data.edge_index?", data2.edge_index.shape, data2.edge_index)
+                #
+                # # # Generate negative edges
+                # neg_edge_index = utils.negative_sampling(edge_index=data2.edge_index,
+                #                                          num_nodes=num_nodes,
+                #                                          num_neg_samples=10*num_neg_samples,
+                #                                          method="sparse",
+                #                                          force_undirected= True)
+                #
+                # "testing how long it takes to run on the complement"
+                #
+                #complement = nx.complement(networkx_graph)
                 # #
-                # neg_edge_index = complement.edges()
-                # neg_edge_index = np.array(list(neg_edge_index)).T
-                # neg_edge_index = torch.from_numpy(neg_edge_index).long()
-                # #print("how large is this thing?", neg_edge_index.shape)
-
-
-                #print("testing the neg_edge_index", neg_edge_index.shape, neg_edge_index)
-
-                # Concatenate positive and negative edges
-                #edge_label_index = torch.cat([data.edge_index, neg_edge_index], dim=1)
-
-
-                # Generating embeddings with trained model
-
-                with torch.no_grad():
-
-                    z = model(data.x, data2.edge_index.to(device))
-
-                    # Calculate the link logits
-                    link_logits = torch.cat(
-                        [(z[edge[0]] * z[edge[1]]).sum(dim=-1).unsqueeze(0) for edge in neg_edge_index.t().tolist()],
-                        dim=0)
-
-
-                    edge_label_index_unflattened = neg_edge_index.t()
-
-                    # Apply sigmoid function to convert logits to probabilities
-                    probabilities = torch.sigmoid(link_logits)
-
-                sorted_prob_indices = torch.argsort(probabilities, descending=True)
-
-                sorted_edges = edge_label_index_unflattened[sorted_prob_indices.cpu()]
+                #neg_edge_index = complement.edges()
+                # # neg_edge_index = np.array(list(neg_edge_index)).T
+                # # neg_edge_index = torch.from_numpy(neg_edge_index).long()
+                # # #print("how large is this thing?", neg_edge_index.shape)
+                #
+                #
+                # #print("testing the neg_edge_index", neg_edge_index.shape, neg_edge_index)
+                #
+                # # Concatenate positive and negative edges
+                # #edge_label_index = torch.cat([data.edge_index, neg_edge_index], dim=1)
+                #
+                #
+                # # Generating embeddings with trained model
+                #
+                # with torch.no_grad():
+                #
+                #     z = model(data.x, data2.edge_index.to(device))
+                #
+                #     # Calculate the link logits
+                #     link_logits = torch.cat(
+                #         [(z[edge[0]] * z[edge[1]]).sum(dim=-1).unsqueeze(0) for edge in neg_edge_index.t().tolist()],
+                #         dim=0)
+                #
+                #
+                #     edge_label_index_unflattened = neg_edge_index.t()
+                #
+                #     # Apply sigmoid function to convert logits to probabilities
+                #     probabilities = torch.sigmoid(link_logits)
+                #
+                # sorted_prob_indices = torch.argsort(probabilities, descending=True)
+                #
+                # sorted_edges = edge_label_index_unflattened[sorted_prob_indices.cpu()]
 
                 new_links_added = 0
                 link_index = 0
+                complement = nx.complement(networkx_graph)
+                # #
+                neg_edge_index = list(complement.edges())
+
+
+                edge_list = random.shuffle(neg_edge_index)
 
                 while new_links_added < break_links:
-                    src, dest = sorted_edges[link_index]
+                    src, dest = edge_list[link_index]
 
                     if not networkx_graph.has_edge(src.item(), dest.item()):
                         networkx_graph.add_edge(src.item(), dest.item())
                         new_links_added += 1
                     link_index += 1
 
-                edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph.edges())) / len(
-                     set(self.original_graph.edges()))
-                print("Edge overlap after link prediction:", np.round(edge_overlap,4), "number of edges", networkx_graph.number_of_edges())
+                # edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph.edges())) / len(
+                #      set(self.original_graph.edges()))
+                # print("Edge overlap after link prediction:", np.round(edge_overlap,4), "number of edges", networkx_graph.number_of_edges())
 
                 networkx_graph
 
@@ -792,14 +798,14 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         if self.params['model']['link_prediction'] == "predicted":
             pass
-            # if self.actual_iteration  == 2 and self.params['model']['operational_mode'] != "ensemble":
-            #     graph = link_prediction(self, model, actual_status, break_fraction = 0.15)
-            #     self.graph = graph
-            #     set_neighborhood_info(self)
-            # if if self.params['model']['operational_mode'] == "ensemble" and self.actual_iteration == 1:
-            #     graph = link_prediction(self, model, actual_status, break_fraction=0.15)
-            #     self.graph = graph
-            #     set_neighborhood_info(self)
+            if self.actual_iteration  == 2 and self.params['model']['operational_mode'] != "ensemble":
+                graph = link_prediction(self, model, actual_status, break_fraction = 0.15)
+                self.graph = graph
+                set_neighborhood_info(self)
+            if self.params['model']['operational_mode'] == "ensemble" and self.actual_iteration == 1:
+                graph = link_prediction(self, model, actual_status, break_fraction=0.15)
+                self.graph = graph
+                set_neighborhood_info(self)
 
         if self.params['model']['link_prediction'] == "natural":
             #print(f"We are entering natural loop for iteration {self.actual_iteration}")
@@ -946,7 +952,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                             range(self.params['model']['dims'])]
                     size_diff = np.sqrt(np.sum(np.square(size_diff)))/np.sqrt(self.params['model']['dims']* np.square(self.params['model']['epsilon']))
 
-                    diff =  (0.6*size_diff + 0.4*(1- (cosine_sim+1)/2))/2
+                    diff =  (0.75*size_diff + 0.25*(1- (cosine_sim+1)/2))
 
                     #print("this is the diff:", diff)
 
