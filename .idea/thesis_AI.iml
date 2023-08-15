@@ -4,6 +4,7 @@
     <content url="file://$MODULE_DIR$">
       <excludeFolder url="file://$MODULE_DIR$/graph_sage_compilter" />
       <excludeFolder url="file://$MODULE_DIR$/thesis_env" />
+      <excludeFolder url="file://$MODULE_DIR$/node_classifier_env" />
     </content>
     <orderEntry type="jdk" jdkName="Python 3.10 (thesis_env)" jdkType="Python SDK" />
     <orderEntry type="sourceFolder" forTests="false" />

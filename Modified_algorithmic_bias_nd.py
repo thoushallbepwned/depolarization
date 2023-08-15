@@ -41,7 +41,6 @@ class GraphSAGE(torch.nn.Module):
         x = self.conv2(x, edge_index)
         return x
 
-
     def compute_scores(self,x, edge_index):
 
         embeddings = self.forward(x, edge_index)
@@ -61,9 +60,9 @@ torch.cuda.empty_cache()
 "Loading link predictor model here"
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 """ Loading the link predictor to prepare for incorporation"""
-model = GraphSAGE(4, 32).to(device)
+model = GraphSAGE(4, 4).to(device)
 model.load_state_dict(
-    torch.load("predictors/predictor_2000_nodes_bounded_mean_model_0.6.pth"))
+    torch.load("predictors/GraphSAGE_model_node_classifier.pth"))
     #torch.load("predictors_new/predictor_2000_nodes_sequential_mean_clean.pth"))
 model.eval()
 
@@ -604,24 +603,85 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 link_index = 0
                 complement = nx.complement(networkx_graph)
                 # #
+                # Get the edges of the complement graph (non-edges of networkx_graph)
                 neg_edge_index = list(complement.edges())
 
-
-                edge_list = random.shuffle(neg_edge_index)
+                # Shuffle the non-edges
+                random.shuffle(neg_edge_index)
 
                 while new_links_added < break_links:
-                    src, dest = edge_list[link_index]
+                    src, dest = neg_edge_index[link_index]
 
-                    if not networkx_graph.has_edge(src.item(), dest.item()):
-                        networkx_graph.add_edge(src.item(), dest.item())
-                        new_links_added += 1
+                    #if not networkx_graph.has_edge(src.item(), dest.item()):
+                    networkx_graph.add_edge(src, dest)
+                    new_links_added += 1
                     link_index += 1
 
                 # edge_overlap = len(set(self.original_graph.edges()).intersection(networkx_graph.edges())) / len(
                 #      set(self.original_graph.edges()))
                 # print("Edge overlap after link prediction:", np.round(edge_overlap,4), "number of edges", networkx_graph.number_of_edges())
 
-                networkx_graph
+
+
+                return networkx_graph
+
+        def graph_embedding_linking(self, model, actual_status, break_fraction):
+            """
+            Link prediction based on graph embedding
+            :param model: trained model
+            :param break_fraction: fraction of links to break
+            :param device: device to run the model on
+            :return: graph with broken links
+            """
+            if self.actual_iteration > 0:
+
+                networkx_graph = self.graph.copy()
+
+                for edge in self.graph.edges():
+                    networkx_graph.add_edge(*edge)
+                for node in self.graph.nodes():
+                    opinion = actual_status[node]
+                    networkx_graph.add_node(node, opinion=opinion)
+
+                # Converting to Pytorch Geometric format
+                data = from_networkx(networkx_graph)
+                data.x = data.opinion.to(device)
+
+                # Obtain embeddings for each node using GraphSAGE
+                with torch.no_grad():
+                    z = model(data.x, data.edge_index.to(device))
+
+                # Breaking links
+                all_edges = list(networkx_graph.edges())
+                random.shuffle(all_edges)
+
+                break_links = int(break_fraction * float(networkx_graph.number_of_edges()))
+
+                broken_links = 0
+                for edge in all_edges:
+                    if broken_links >= break_links:
+                        break
+                    node1, node2 = edge
+                    if networkx_graph.degree(node1) <= 1 or networkx_graph.degree(node2) <= 1:
+                        continue
+
+                    networkx_graph.remove_edge(node1, node2)
+                    broken_links += 1
+
+                # For potential links, calculate similarity based on embeddings
+                complement = nx.complement(networkx_graph)
+                neg_edge_index = list(complement.edges())
+
+                edge_scores = [(src, dest, (z[src] * z[dest]).sum().item()) for src, dest in neg_edge_index]
+                edge_scores.sort(key=lambda x: x[2], reverse=True)  # Sort by similarity score
+
+                # Add links based on their scores
+                new_links_added = 0
+                for src, dest, _ in edge_scores:
+                    if new_links_added >= break_links:
+                        break
+                    networkx_graph.add_edge(src, dest)
+                    new_links_added += 1
 
                 return networkx_graph
 
@@ -799,11 +859,12 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
         if self.params['model']['link_prediction'] == "predicted":
             pass
             if self.actual_iteration  == 2 and self.params['model']['operational_mode'] != "ensemble":
-                graph = link_prediction(self, model, actual_status, break_fraction = 0.15)
+                #graph = link_prediction(self, model, actual_status, break_fraction = 0.15)
+                graph = graph_embedding_linking(self, model, actual_status, break_fraction=0.15)
                 self.graph = graph
                 set_neighborhood_info(self)
             if self.params['model']['operational_mode'] == "ensemble" and self.actual_iteration == 1:
-                graph = link_prediction(self, model, actual_status, break_fraction=0.15)
+                graph = graph_embedding_linking(self, model, actual_status, break_fraction=0.15)
                 self.graph = graph
                 set_neighborhood_info(self)
 
@@ -1256,44 +1317,49 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                     # print("Going into softmax operational mode")
 
                     if allowance == True:
-                        # print("Allowance is true, we are going to interact")
 
+                        eligible_dims = [i for i in range(self.params['model']['dims']) if
+                                         np.abs((actual_status[n1][i] + 2) - (actual_status[n2][i] + 2)) < diff_bounded]
 
-                        for i in range(self.params['model']['dims']):
-                            if np.abs((actual_status[n1][i]+2) - (actual_status[n2][i]+2)) < diff_bounded:
+                        # 2. Select one of these indices randomly, if there are any eligible dimensions
+                        if eligible_dims:
+                            selected_dim = random.choice(eligible_dims)
+
+                        # for i in range(self.params['model']['dims']):
+                        #     if np.abs((actual_status[n1][i]+2) - (actual_status[n2][i]+2)) < diff_bounded:
                                 #print("We found a dimension that is close enough to interact on", i)
 
-                                if self.params['model']['noise'] > 0:
-                                    change1 = ((actual_status[n2][i] + 2) - (
-                                            actual_status[n1][i] + 2))
-                                    change2 = ((actual_status[n1][i] + 2) - (
-                                            actual_status[n2][i] + 2))
+                            if self.params['model']['noise'] > 0:
+                                change1 = ((actual_status[n2][selected_dim] + 2) - (
+                                        actual_status[n1][selected_dim] + 2))
+                                change2 = ((actual_status[n1][selected_dim] + 2) - (
+                                        actual_status[n2][selected_dim] + 2))
 
-                                    noise1 = np.random.uniform(low=-1 * change1 * self.params['model']['noise'],
-                                                               high=change1 * self.params['model']['noise'])
-                                    noise2 = np.random.uniform(low=-1 * change2 * self.params['model']['noise'],
-                                                               high=change2 * self.params['model']['noise'])
+                                noise1 = np.random.uniform(low=-1 * change1 * self.params['model']['noise'],
+                                                           high=change1 * self.params['model']['noise'])
+                                noise2 = np.random.uniform(low=-1 * change2 * self.params['model']['noise'],
+                                                           high=change2 * self.params['model']['noise'])
 
-                                    actual_status[n1][i] = actual_status[n1][i] + self.params['model'][
-                                        'mu'] * change1 + noise1
-                                    actual_status[n2][i] = actual_status[n2][i] + self.params['model'][
-                                        'mu'] * change2 + noise2
+                                actual_status[n1][selected_dim] = actual_status[n1][selected_dim] + self.params['model'][
+                                    'mu'] * change1 + noise1
+                                actual_status[n2][selected_dim] = actual_status[n2][selected_dim] + self.params['model'][
+                                    'mu'] * change2 + noise2
 
-                                if self.params['model']['noise'] == 0:
-                                    # Testing some ways to see if the absolute difference is screwing things up
-                                    change1 = (actual_status[n2][i] + 10) - (
-                                            actual_status[n1][i] + 10)
-                                    change2 = (actual_status[n1][i] + 10) - (
-                                            actual_status[n2][i] + 10)
-                                    pos1 = actual_status[n1][i]
-                                    pos2 = actual_status[n2][i]
+                            if self.params['model']['noise'] == 0:
+                                # Testing some ways to see if the absolute difference is screwing things up
+                                change1 = (actual_status[n2][selected_dim] + 10) - (
+                                        actual_status[n1][selected_dim] + 10)
+                                change2 = (actual_status[n1][selected_dim] + 10) - (
+                                        actual_status[n2][selected_dim] + 10)
+                                pos1 = actual_status[n1][selected_dim]
+                                pos2 = actual_status[n2][selected_dim]
 
                                     #########################################
                                     # THIS EQUATION IS SUPER IMPORTANT
 
-                                    # if actual_status[n1] > actual_status[n2]:
-                                    actual_status[n1][i] = pos1 + self.params['model']['mu'] * change1
-                                    actual_status[n2][i] = pos2 + self.params['model']['mu'] * change2
+                                # if actual_status[n1] > actual_status[n2]:
+                                actual_status[n1][selected_dim] = pos1 + self.params['model']['mu'] * change1
+                                actual_status[n2][selected_dim] = pos2 + self.params['model']['mu'] * change2
                             else:
                                 continue
 

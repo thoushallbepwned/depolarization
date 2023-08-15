@@ -32,7 +32,7 @@ m = 8  # number of edges per node
 p = 0.70  # probability of rewiring each edge
 minority_fraction = 0.5  # fraction of minority nodes in the network
 similitude = 0.8  # similarity metric
-d = 1  # number of dimension
+d = 4  # number of dimension
 
 #defining helper functions
 def Extract(lst):
@@ -410,8 +410,8 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
 
 
 if __name__ == "__main__":
-    interval = np.arange(0.10, 0.90, 0.25)
-    dims = 1
+    interval = np.arange(0.30, 0.90, 0.10)
+    dims = 4
 
     noise = ["noiseless"]#["noisy"]#,"noiseless"]
     operation_list = ["sequential", "softmax","bounded", "ensemble"]
