@@ -61,10 +61,10 @@ torch.cuda.empty_cache()
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 """ Loading the link predictor to prepare for incorporation"""
 model = GraphSAGE(4, 4).to(device)
-model.load_state_dict(
-    torch.load("predictors/GraphSAGE_model_node_classifier.pth"))
-    #torch.load("predictors_new/predictor_2000_nodes_sequential_mean_clean.pth"))
-model.eval()
+# model.load_state_dict(
+#     #torch.load("predictors/GraphSAGE_model_node_classifier.pth"))
+#     torch.load("predictors/predictor_2000_nodes_bounded_mean_model_0.6.pth"))
+# model.eval()
 
 class AlgorithmicBiasModel_nd(DiffusionModel):
     """
@@ -858,15 +858,15 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
         if self.params['model']['link_prediction'] == "predicted":
             pass
-            if self.actual_iteration  == 2 and self.params['model']['operational_mode'] != "ensemble":
-                #graph = link_prediction(self, model, actual_status, break_fraction = 0.15)
-                graph = graph_embedding_linking(self, model, actual_status, break_fraction=0.15)
-                self.graph = graph
-                set_neighborhood_info(self)
-            if self.params['model']['operational_mode'] == "ensemble" and self.actual_iteration == 1:
-                graph = graph_embedding_linking(self, model, actual_status, break_fraction=0.15)
-                self.graph = graph
-                set_neighborhood_info(self)
+            # if self.actual_iteration  == 2 and self.params['model']['operational_mode'] != "ensemble":
+            #     #graph = link_prediction(self, model, actual_status, break_fraction = 0.15)
+            #     graph = graph_embedding_linking(self, model, actual_status, break_fraction=0.15)
+            #     self.graph = graph
+            #     set_neighborhood_info(self)
+            # if self.params['model']['operational_mode'] == "ensemble" and self.actual_iteration == 1:
+            #     graph = graph_embedding_linking(self, model, actual_status, break_fraction=0.15)
+            #     self.graph = graph
+            #     set_neighborhood_info(self)
 
         if self.params['model']['link_prediction'] == "natural":
             #print(f"We are entering natural loop for iteration {self.actual_iteration}")
@@ -956,9 +956,14 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
 
             if self.params['model']['distance_method'] == 'mean_euclidean':
                 if self.params['model']['dims'] > 1:
-                    diff = [(actual_status[n1][d] + 2) - (actual_status[n2][d] + 2) for d in
-                            range(self.params['model']['dims'])]
-                    diff = np.sqrt(np.sum(np.square(diff)))
+                    squared_diffs = [(actual_status[n1][d] - actual_status[n2][d]) ** 2
+                                     for d in range(self.params['model']['dims'])]
+
+                    euclidean_distance = np.sqrt(sum(squared_diffs))
+                    normalized_distance = euclidean_distance / (2*np.sqrt(self.params['model']['dims']))
+
+
+                    diff = normalized_distance
 
                     #diff = [abs((actual_status[n1][d]+2) - (actual_status[n2][d]+2)) for d in range(self.params['model']['dims'])]
                     #diff = np.mean(diff)
@@ -975,6 +980,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 if self.params['model']['dims'] > 1:
                     diff = [abs((actual_status[n1][d]+2) - (actual_status[n2][d]+2)) for d in range(self.params['model']['dims'])]
                     diff = np.max(diff)
+                    diff = diff/2
                 else:
                     diff  = np.abs((actual_status[n1]+2) - (actual_status[n2]+2))
 
@@ -1041,9 +1047,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
                 else:
                     allowance = False
             elif self.params['model']['distance_method'] == 'mean_euclidean':
-
-                distance = np.sqrt(self.params['model']['dims']* np.square(self.params['model']['epsilon']))
-                if diff < distance:
+                if diff < self.params['model']['epsilon']:
                     allowance = True
                 else:
                     allowance = False

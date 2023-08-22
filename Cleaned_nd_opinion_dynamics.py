@@ -410,12 +410,14 @@ def run_simulation(distance_method, mode, epsilon, operational_mode, interventio
 
 
 if __name__ == "__main__":
-    interval = np.arange(0.30, 0.90, 0.10)
+
+    all_results = {}
+    interval = np.arange(0.20, 0.90, 0.05)
     dims = 4
 
     noise = ["noiseless"]#["noisy"]#,"noiseless"]
     operation_list = ["sequential", "softmax","bounded", "ensemble"]
-    method_list = ["mean_euclidean"]#, "size_cosine"]#["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
+    method_list = ["strict_euclidean", "cosine", "mean_euclidean", "size_cosine"]#, "strict_euclidean"]#, "size_cosine"]#["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
     intervention_status = ["natural", "predicted", "high-removal", "low-removal"]#["natural", "intervened", "targeted"]
 
@@ -461,6 +463,9 @@ if __name__ == "__main__":
                     #     f"images/{noise_mode}/{operation}/{method}/{seed}/fig2_{index}.png",
                     #     dpi=fig.dpi)
 
+                        key = (noise_mode, operation, method, seed, i)  # Unique key for each combination
+                        all_results[key] = results, metric_results  # Step 2: Save Results to the Dictionary
+
                     operation_results_nat[operation].append(metric_results["natural"])
                     operation_results_pred[operation].append(metric_results["predicted"])
                     operation_results_Hrem[operation].append(metric_results["high-removal"])
@@ -469,51 +474,54 @@ if __name__ == "__main__":
                     print(operation_results_nat)
                     print(operation_results_Lrem)
 
-        # Compute the delta values
-        delta_Hrem = {}
-        delta_Lrem = {}
 
-        for operation in operation_list:
-            nat_data = operation_results_nat[operation][0]
-            hrem_data = operation_results_Hrem[operation][0]
-            lrem_data = operation_results_Lrem[operation][0]
-
-            # Note the order of subtraction: hrem_arr - nat_arr and lrem_arr - nat_arr
-            delta_Hrem_data = [(eps, subtract_arrays(hrem_arr, nat_arr)) for (eps, nat_arr), (_, hrem_arr) in
-                               zip(nat_data, hrem_data)]
-            delta_Lrem_data = [(eps, subtract_arrays(lrem_arr, nat_arr)) for (eps, nat_arr), (_, lrem_arr) in
-                               zip(nat_data, lrem_data)]
-
-            delta_Hrem[operation] = [delta_Hrem_data]
-            delta_Lrem[operation] = [delta_Lrem_data]
-
-        # Visualize the delta values
-        fig7 = visualize_natural_state_line_plot(delta_Hrem, operation_list, "Delta High Removal")
-        fig8 = visualize_natural_state_line_plot(delta_Lrem, operation_list, "Delta Low Removal")
-
-                #print("outer loop", operation_results)
-        fig3 = visualize_natural_state_line_plot(operation_results_nat, operation_list, "Natural")
-        fig4 = visualize_natural_state_line_plot(operation_results_Hrem, operation_list, "High Removal")
-        fig5 = visualize_natural_state_line_plot(operation_results_pred, operation_list, "Predicted")
-        fig6 = visualize_natural_state_line_plot(operation_results_Lrem, operation_list, "Low Removal")
-
-        fig3.savefig(
-            f"polarization logs/{method}_medium_state.png",
-            dpi=fig3.dpi)
-        fig4.savefig(
-            f"polarization logs/{method}_high_removal.png",
-            dpi=fig4.dpi)
-        fig5.savefig(
-            f"polarization logs/{method}_predicted_state.png",
-            dpi=fig5.dpi)
-        fig6.savefig(
-            f"polarization logs/{method}_low_removal.png",
-            dpi=fig6.dpi)
-
-        fig7.savefig(
-            f"polarization logs/{method}_delta_high_removal.png",
-            dpi=fig7.dpi)
-        fig8.savefig(
-            f"polarization logs/{method}_delta_low_removal.png",
-            dpi=fig8.dpi)
+                with open('simulation_results.pkl', 'wb') as f:
+                    pickle.dump(all_results, f)
+        # # Compute the delta values
+        # delta_Hrem = {}
+        # delta_Lrem = {}
+        #
+        # for operation in operation_list:
+        #     nat_data = operation_results_nat[operation][0]
+        #     hrem_data = operation_results_Hrem[operation][0]
+        #     lrem_data = operation_results_Lrem[operation][0]
+        #
+        #     # Note the order of subtraction: hrem_arr - nat_arr and lrem_arr - nat_arr
+        #     delta_Hrem_data = [(eps, subtract_arrays(hrem_arr, nat_arr)) for (eps, nat_arr), (_, hrem_arr) in
+        #                        zip(nat_data, hrem_data)]
+        #     delta_Lrem_data = [(eps, subtract_arrays(lrem_arr, nat_arr)) for (eps, nat_arr), (_, lrem_arr) in
+        #                        zip(nat_data, lrem_data)]
+        #
+        #     delta_Hrem[operation] = [delta_Hrem_data]
+        #     delta_Lrem[operation] = [delta_Lrem_data]
+        #
+        # # Visualize the delta values
+        # fig7 = visualize_natural_state_line_plot(delta_Hrem, operation_list, "Delta High Removal")
+        # fig8 = visualize_natural_state_line_plot(delta_Lrem, operation_list, "Delta Low Removal")
+        #
+        #         #print("outer loop", operation_results)
+        # fig3 = visualize_natural_state_line_plot(operation_results_nat, operation_list, "Natural")
+        # fig4 = visualize_natural_state_line_plot(operation_results_Hrem, operation_list, "High Removal")
+        # fig5 = visualize_natural_state_line_plot(operation_results_pred, operation_list, "Predicted")
+        # fig6 = visualize_natural_state_line_plot(operation_results_Lrem, operation_list, "Low Removal")
+        #
+        # fig3.savefig(
+        #     f"polarization logs/{method}_medium_state.png",
+        #     dpi=fig3.dpi)
+        # fig4.savefig(
+        #     f"polarization logs/{method}_high_removal.png",
+        #     dpi=fig4.dpi)
+        # fig5.savefig(
+        #     f"polarization logs/{method}_predicted_state.png",
+        #     dpi=fig5.dpi)
+        # fig6.savefig(
+        #     f"polarization logs/{method}_low_removal.png",
+        #     dpi=fig6.dpi)
+        #
+        # fig7.savefig(
+        #     f"polarization logs/{method}_delta_high_removal.png",
+        #     dpi=fig7.dpi)
+        # fig8.savefig(
+        #     f"polarization logs/{method}_delta_low_removal.png",
+        #     dpi=fig8.dpi)
 
