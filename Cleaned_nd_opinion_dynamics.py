@@ -475,7 +475,7 @@ if __name__ == "__main__":
                     print(operation_results_Lrem)
 
 
-                with open('simulation_results_1439.pkl', 'wb') as f:
+                with open('simulation_results_8792.pkl', 'wb') as f:
                     pickle.dump(all_results, f)
         # # Compute the delta values
         # delta_Hrem = {}
