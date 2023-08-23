@@ -415,7 +415,7 @@ if __name__ == "__main__":
     interval = np.arange(0.20, 0.90, 0.05)
     dims = 4
 
-    noise = ["noiseless"]#["noisy"]#,"noiseless"]
+    noise = ["noiseless"]#eless"]#["noisy"]#,"noiseless"]
     operation_list = ["sequential", "softmax","bounded", "ensemble"]
     method_list = ["strict_euclidean", "cosine", "mean_euclidean", "size_cosine"]#, "strict_euclidean"]#, "size_cosine"]#["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
@@ -475,7 +475,7 @@ if __name__ == "__main__":
                     print(operation_results_Lrem)
 
 
-                with open('simulation_results.pkl', 'wb') as f:
+                with open('simulation_results_1439.pkl', 'wb') as f:
                     pickle.dump(all_results, f)
         # # Compute the delta values
         # delta_Hrem = {}
