@@ -296,7 +296,7 @@ def plot_interaction(interaction, all_results):
     mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=['#9467BD', '#8C564B', '#E377C2', '#7F7F7F'])
 
     # Provided options
-    allowances = ["strict_euclidean", "cosine", "size_cosine", "mean_euclidean"]
+    allowances = ["strict_euclidean", "cosine", "mean_euclidean"]
     scenarios = ['natural', 'low-removal', 'high-removal']
 
     # Determine the global y-axis limits for sum
@@ -345,13 +345,13 @@ def plot_interaction(interaction, all_results):
             # Plot data for each scenario
             x = [entry[0] for entry in alt_dict_value[scenario]]
 
-            axs[0, scenarios.index(scenario)].errorbar(x, avg_sums, yerr=np.sqrt(sem_sums), fmt='-o', label=interaction)
+            axs[0, scenarios.index(scenario)].errorbar(x, avg_sums, yerr=np.sqrt(sem_sums), fmt='-o', label=allowance)
             axs[0, scenarios.index(scenario)].set_title(f"Sum - {scenario}")
             axs[0, scenarios.index(scenario)].set_xlabel('Parameter Value')
             axs[0, scenarios.index(scenario)].set_ylabel('Avg Sum of Metrics')
 
             axs[1, scenarios.index(scenario)].errorbar(x, avg_percents, yerr=np.sqrt(sem_percents), fmt='-o',
-                                                       label=interaction)
+                                                       label=allowance)
             axs[1, scenarios.index(scenario)].set_title(f"% Contribution - {scenario}")
             axs[1, scenarios.index(scenario)].set_xlabel('Parameter Value')
             axs[1, scenarios.index(scenario)].set_ylabel('Avg % Contribution of Largest Value')
@@ -381,7 +381,7 @@ def plot_interaction(interaction, all_results):
 def plot_net_difference2_average(interaction, all_results):
     mpl.rcParams.update(mpl.rcParamsDefault)
 
-    allowances = ["strict_euclidean", "cosine", "mean_euclidean", "size_cosine"]
+    allowances = ["strict_euclidean", "cosine", "mean_euclidean"]
     scenarios = ['low-removal', 'high-removal']
 
     fig, axs = plt.subplots(2, 2, figsize=(12, 12))
@@ -498,20 +498,20 @@ for filename in pickle_files:
 
 
 
-options = ["strict_euclidean", "cosine", "mean_euclidean", "size_cosine"]
+options = ["strict_euclidean", "cosine", "mean_euclidean"]
 for option in options:
     fig1 = plot_allowance(option, all_results)
     fig2 = plot_net_difference_average(option, all_results)
-    #fig1.savefig(f"final_figures/allowance_{option}.png")
-    #fig2.savefig(f"final_figures/allowance_{option}_diff.png")
+    fig1.savefig(f"final_figures/allowance_{option}.png")
+    fig2.savefig(f"final_figures/allowance_{option}_diff.png")
 
 interactions = ["sequential", "softmax", "bounded", "ensemble"]
 
 for interaction in interactions:
     fig3 = plot_interaction(interaction, all_results)
     fig4 = plot_net_difference2_average(interaction, all_results)
-    #fig3.savefig(f"final_figures/interaction_{interaction}.png")
-    #fig4.savefig(f"final_figures/interaction_{interaction}_diff.png")
+    fig3.savefig(f"final_figures/interaction_{interaction}.png")
+    fig4.savefig(f"final_figures/interaction_{interaction}_diff.png")
 
 
 
