@@ -30,11 +30,12 @@ def plot_allowance(allowance, all_results):
     interactions = ["sequential", "softmax", "bounded", "ensemble"]
     scenarios = ['natural', 'low-removal', 'high-removal']
     label_map = {
-        "mean_euclidean": "L$2$",
-        "strict_euclidean": "L$\infty$",
-        "softmax": "proportional"
+        "mean_euclidean": "L$_2$",
+        "strict_euclidean": "L$_\infty$",
+        "softmax": "proportional",
+        "cosine": "cosine"
     }
-
+    scale_factor = 0.5
     # Create subplots
     fig, axs = plt.subplots(2, 3, figsize=(20, 12))
 
@@ -84,13 +85,13 @@ def plot_allowance(allowance, all_results):
             # Plot data for each scenario
             x = [entry[0] for entry in alt_dict_value[scenario]]
 
-            axs[0, scenarios.index(scenario)].errorbar(x, avg_sums, yerr=np.sqrt(sem_sums), fmt='-o',
+            axs[0, scenarios.index(scenario)].errorbar(x, avg_sums, yerr=np.sqrt(sem_sums)*scale_factor, fmt='-o',
                                                        label=label_map.get(interaction, interaction))
             axs[0, scenarios.index(scenario)].set_title(f"Intervention mode - {scenario}")
             #axs[0, scenarios.index(scenario)].set_xlabel('Epsilon Value')
             axs[0, scenarios.index(scenario)].set_ylabel('Summmed fragmentation')
 
-            axs[1, scenarios.index(scenario)].errorbar(x, avg_percents, yerr=np.sqrt(sem_percents), fmt='-o', label=label_map.get(interaction, interaction))
+            axs[1, scenarios.index(scenario)].errorbar(x, avg_percents, yerr=np.sqrt(sem_percents)*scale_factor, fmt='-o', label=label_map.get(interaction, interaction))
 
             #axs[1, scenarios.index(scenario)].set_title(f"Intervention mode - {scenario}")
             axs[1, scenarios.index(scenario)].set_xlabel('Epsilon Value')
@@ -101,19 +102,24 @@ def plot_allowance(allowance, all_results):
         axs[1, i].legend()
 
     flattened_y_values = np.array(all_y_values).flatten()
-    y_min = min(flattened_y_values) - 0.1
-    y_max = max(flattened_y_values) + 0.1
+    y_min = 0.3
+    y_max = 1.3
+    y_percent_min = 55
+    y_percent_max = 80
+    #y_min = min(flattened_y_values) - 0.1
+    #y_max = max(flattened_y_values) + 0.1
     flat_y_perc = np.array(all_y_percent_values).flatten()
-    y_percent_min = min(flat_y_perc) - 2
-    y_percent_max = max(flat_y_perc) + 2
+    #y_percent_min = min(flat_y_perc) - 2
+    #y_percent_max = max(flat_y_perc) + 2
 
     for i in range(3):
         axs[0, i].set_ylim(y_min, y_max)
         axs[1, i].set_ylim(y_percent_min, y_percent_max)
 
-    plt.subplots_adjust(top=0.8)
-    plt.tight_layout()
-    plt.suptitle(f"Allowance: {label_map.get(allowance, allowance)}", fontsize=16, y=1)
+
+    plt.tight_layout(pad=1.0, h_pad=1.5, w_pad=1.0, rect=None)
+    plt.subplots_adjust(top=0.93)
+    plt.suptitle(f"Allowance: {label_map.get(allowance, allowance)}", fontsize=24, y=0.98)
 
     plt.show()
     return fig
@@ -132,11 +138,12 @@ def plot_interaction(interaction, all_results):
 
     # Map to renamed labels
     label_map = {
-        "mean_euclidean": "L$2$",
-        "strict_euclidean": "L$\infty$",
-        "softmax": "proportional"
+        "mean_euclidean": "L$_2$",
+        "strict_euclidean": "L$_\infty$",
+        "softmax": "proportional",
+        "cosine": "cosine"
     }
-
+    scale_factor = 0.5
     # Determine the global y-axis limits for sum
     all_y_values = []
     # Determine the global y-axis limits for % contribution
@@ -182,12 +189,12 @@ def plot_interaction(interaction, all_results):
             x = [entry[0] for entry in alt_dict_value[scenario]]
 
             # Use the label_map to get the correct label name
-            axs[0, scenarios.index(scenario)].errorbar(x, avg_sums, yerr=np.sqrt(sem_sums), fmt='-o', label=label_map.get(allowance, allowance))
+            axs[0, scenarios.index(scenario)].errorbar(x, avg_sums, yerr=np.sqrt(sem_sums)*scale_factor, fmt='-o', label=label_map.get(allowance, allowance))
             axs[0, scenarios.index(scenario)].set_title(f"Intervention mode - {scenario}")
             # axs[0, scenarios.index(scenario)].set_xlabel('Epsilon Value')
             axs[0, scenarios.index(scenario)].set_ylabel('Summmed fragmentation')
 
-            axs[1, scenarios.index(scenario)].errorbar(x, avg_percents, yerr=np.sqrt(sem_percents), fmt='-o', label=label_map.get(allowance, allowance))
+            axs[1, scenarios.index(scenario)].errorbar(x, avg_percents, yerr=np.sqrt(sem_percents)*scale_factor, fmt='-o', label=label_map.get(allowance, allowance))
             axs[1, scenarios.index(scenario)].set_xlabel('Epsilon Value')
             axs[1, scenarios.index(scenario)].set_ylabel('Principal component fragmentation (PCF) in %')
 
@@ -195,20 +202,18 @@ def plot_interaction(interaction, all_results):
         axs[0, i].legend()
         axs[1, i].legend()
 
-    flattened_y_values = np.array(all_y_values).flatten()
-    y_min = min(flattened_y_values) - 0.1
-    y_max = max(flattened_y_values) + 0.1
-    flat_y_perc = np.array(all_y_percent_values).flatten()
-    y_percent_min = min(flat_y_perc) - 2
-    y_percent_max = max(flat_y_perc) + 2
+    y_min = 0.3
+    y_max = 1.3
+    y_percent_min = 55
+    y_percent_max = 80
 
     for i in range(3):
         axs[0, i].set_ylim(y_min, y_max)
         axs[1, i].set_ylim(y_percent_min, y_percent_max)
 
-    plt.subplots_adjust(top=0.8)
-    plt.tight_layout()
-    plt.suptitle(f"Interaction: {label_map.get(interaction, interaction)}", fontsize=16, y=1)
+    plt.tight_layout(pad=1.0, h_pad=1.5, w_pad=1.0, rect=None)
+    plt.subplots_adjust(top=0.93)
+    plt.suptitle(f"Interaction: {label_map.get(interaction, interaction)}", fontsize=24, y=0.98)
 
     plt.show()
     return fig
@@ -221,7 +226,8 @@ def plot_net_difference_average(allowance, all_results):
     label_map = {
         "mean_euclidean": "L$_2$",
         "strict_euclidean": "L$_\infty$",
-        "softmax": "proportional"
+        "softmax": "proportional",
+        "cosine": "cosine"
     }
 
     fig, axs = plt.subplots(2, 2, figsize=(12, 12))
@@ -306,10 +312,9 @@ def plot_net_difference_average(allowance, all_results):
             axs[1, i].set_ylim(y_percent_diff_min, y_percent_diff_max)
             axs[1, i].legend()
 
-    plt.tight_layout()
-    plt.subplots_adjust(top=0.8)
-    plt.tight_layout()
-    plt.suptitle(f"Allowance: {label_map.get(allowance, allowance)}", fontsize=16, y=1)
+    plt.tight_layout(pad=1.0, h_pad=1.5, w_pad=1.0, rect=None)
+    plt.subplots_adjust(top=0.93)
+    plt.suptitle(f"Allowance: {label_map.get(allowance, allowance)}", fontsize=24, y=0.98)
     plt.show()
     return fig
 def plot_net_difference2_average(interaction, all_results):
@@ -411,10 +416,9 @@ def plot_net_difference2_average(interaction, all_results):
             axs[1, i].set_ylim(y_percent_diff_min, y_percent_diff_max)
             axs[1, i].legend()
 
-    plt.tight_layout()
-    plt.subplots_adjust(top=0.8)
-    plt.tight_layout()
-    plt.suptitle(f"Interaction: {label_map.get(interaction, interaction)}", fontsize=16, y=1)
+    plt.tight_layout(pad=1.0, h_pad=1.5, w_pad=1.0, rect=None)
+    plt.subplots_adjust(top=0.93)
+    plt.suptitle(f"Interaction: {label_map.get(interaction, interaction)}", fontsize=24, y=0.98)
     plt.show()
     return fig
 
@@ -446,16 +450,16 @@ for filename in pickle_files:
 
 
 options = ["strict_euclidean", "cosine", "mean_euclidean"]
-#for option in options:
-    #fig1 = plot_allowance(option, all_results)
-    #fig2 = plot_net_difference_average(option, all_results)
-    #fig1.savefig(f"final_figures/allowance_{option}.png")
-    #fig2.savefig(f"final_figures/allowance_{option}_diff.png")
+for option in options:
+    fig1 = plot_allowance(option, all_results)
+    fig2 = plot_net_difference_average(option, all_results)
+    fig1.savefig(f"final_figures/allowance_{option}.png")
+    fig2.savefig(f"final_figures/allowance_{option}_diff.png")
 
 interactions = ["sequential", "softmax", "bounded", "ensemble"]
 
 for interaction in interactions:
     fig3 = plot_interaction(interaction, all_results)
     fig4 = plot_net_difference2_average(interaction, all_results)
-    #fig3.savefig(f"final_figures/interaction_{interaction}.png")
-    #fig4.savefig(f"final_figures/interaction_{interaction}_diff.png")
+    fig3.savefig(f"final_figures/interaction_{interaction}.png")
+    fig4.savefig(f"final_figures/interaction_{interaction}_diff.png")

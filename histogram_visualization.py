@@ -65,6 +65,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 def plot_heatmaps(data_after, epsilon_list, allowances, interaction, mode):
+    label_map = {
+        "mean_euclidean": "L$2$",
+        "strict_euclidean": "L$\infty$",
+        "softmax": "proportional",
+        "cosine": "cosine"
+    }
     bin_count = 80
     global_min = data_after.min().min()
     global_max = data_after.max().max()
@@ -87,7 +93,7 @@ def plot_heatmaps(data_after, epsilon_list, allowances, interaction, mode):
                     local_vmax = hist.max()
 
             sns.heatmap(heatmap_data, ax=axes[a_idx, dim_idx], cmap='viridis', vmin=0, vmax=local_vmax)
-            axes[a_idx, dim_idx].set_title(f"{col} | Allowance: {allowance}")
+            axes[a_idx, dim_idx].set_title(f"{col} | Allowance: {label_map.get(allowance, allowance)}")
             axes[a_idx, dim_idx].set_xlabel('Opinion Value')
 
             # Opinion axis ticks
@@ -102,10 +108,18 @@ def plot_heatmaps(data_after, epsilon_list, allowances, interaction, mode):
                 axes[a_idx, dim_idx].set_ylabel('Epsilon')
 
     fig.subplots_adjust(left=0.1, right=0.9, top=0.92, bottom=0.1, wspace=0.4, hspace=0.5)
-    fig.suptitle(f"Opinion distribution under {interaction} and differing allowances, mode:{mode}", fontsize=16)
+    fig.suptitle(f"Opinion distribution under {label_map.get(interaction, interaction)} and differing allowances, mode:{mode}", fontsize=24)
     plt.show()
     return fig
+
 def plot_heatmaps_inv(data_after, epsilon_list, allowance, interactions, mode):
+    label_map = {
+        "mean_euclidean": "L$_2$",
+        "strict_euclidean": "L$_\infty$",
+        "softmax": "proportional",
+        "cosine": "cosine"
+    }
+
     bin_count = 80
     global_min = data_after.min().min()
     global_max = data_after.max().max()
@@ -129,7 +143,7 @@ def plot_heatmaps_inv(data_after, epsilon_list, allowance, interactions, mode):
                     local_vmax = hist.max()
 
             sns.heatmap(heatmap_data, ax=axes[int_idx, dim_idx], cmap='viridis', vmin=0, vmax=local_vmax)
-            axes[int_idx, dim_idx].set_title(f"{col} | Interaction: {interaction}")
+            axes[int_idx, dim_idx].set_title(f"{col} | Interaction: {label_map.get(interaction, interaction)}")
             axes[int_idx, dim_idx].set_xlabel('Opinion Value')
 
             # Opinion axis ticks
@@ -144,7 +158,7 @@ def plot_heatmaps_inv(data_after, epsilon_list, allowance, interactions, mode):
                 axes[int_idx, dim_idx].set_ylabel('Epsilon')
 
         fig.subplots_adjust(left=0.1, right=0.9, top=0.92, bottom=0.1, wspace=0.4, hspace=0.5)
-        fig.suptitle(f"Opinion distribution under different interactions with {allowance} allowance, mode:{mode}", fontsize=16)
+        fig.suptitle(f"Opinion distribution under different interactions with {label_map.get(allowance, allowance)} allowance, mode:{mode}", fontsize=24)
 
     return fig
 def compute_difference_histogram(data1, data2, bin_edges):
@@ -153,6 +167,13 @@ def compute_difference_histogram(data1, data2, bin_edges):
     return hist1 - hist2
 
 def plot_heatmaps_difference(data_after, epsilon_list, allowances, interaction, removal_mode):
+    label_map = {
+        "mean_euclidean": "L$_2$",
+        "strict_euclidean": "L$_\infty$",
+        "softmax": "proportional",
+        "cosine": "cosine"
+    }
+
     bin_count = 80
     global_min = data_after.min().min()
     global_max = data_after.max().max()
@@ -175,7 +196,7 @@ def plot_heatmaps_difference(data_after, epsilon_list, allowances, interaction, 
 
             sns.heatmap(heatmap_data, ax=axes[a_idx, dim_idx], cmap='bwr',
                         center=0)  # Using blue-white-red color map centered at 0
-            axes[a_idx, dim_idx].set_title(f"{col} | Allowance: {allowance}")
+            axes[a_idx, dim_idx].set_title(f"{col} | Allowance: {label_map.get(allowance, allowance)}")
             axes[a_idx, dim_idx].set_xlabel('Opinion Value')
 
             # Opinion axis ticks
@@ -190,8 +211,8 @@ def plot_heatmaps_difference(data_after, epsilon_list, allowances, interaction, 
                 axes[a_idx, dim_idx].set_ylabel('Epsilon')
 
         fig.subplots_adjust(left=0.1, right=0.9, top=0.92, bottom=0.1, wspace=0.4, hspace=0.5)
-        fig.suptitle(f"Density change for {interaction} interaction under {removal_mode}",
-                     fontsize=16)
+        fig.suptitle(f"Density change for {label_map.get(interaction,interaction)} interaction under {removal_mode}",
+                     fontsize=24)
     plt.show()
     return fig
 
@@ -202,20 +223,20 @@ modes = ["natural", "high-removal", "low-removal"]
 
 for interaction in interactions:
     # Plotting for natural mode
-    #fig = plot_heatmaps(after_data, epsilon_list, allowances, interaction, "natural")
-    #fig.savefig(f'final_figures/natural_heatmap_{interaction}.png', dpi=300, bbox_inches='tight')
+    fig = plot_heatmaps(after_data, epsilon_list, allowances, interaction, "natural")
+    fig.savefig(f'final_figures/natural_heatmap_{interaction}.png', dpi=300, bbox_inches='tight')
     #
     # # Plotting difference histograms for high-removal mode
-    fig = plot_heatmaps_difference(after_data, epsilon_list, allowances, interaction, "high-removal")
-    fig.savefig(f'final_figures/difference_high-removal_heatmap_{interaction}.png', dpi=300, bbox_inches='tight')
+    #fig = plot_heatmaps_difference(after_data, epsilon_list, allowances, interaction, "high-removal")
+    #fig.savefig(f'final_figures/difference_high-removal_heatmap_{interaction}.png', dpi=300, bbox_inches='tight')
     #
     # # Plotting difference histograms for low-removal mode
-    fig = plot_heatmaps_difference(after_data, epsilon_list, allowances, interaction, "low-removal")
-    fig.savefig(f'final_figures/difference_low-removal_heatmap_{interaction}.png', dpi=300, bbox_inches='tight')
+    #fig = plot_heatmaps_difference(after_data, epsilon_list, allowances, interaction, "low-removal")
+    #fig.savefig(f'final_figures/difference_low-removal_heatmap_{interaction}.png', dpi=300, bbox_inches='tight')
 
-#for allowance in allowances:
+for allowance in allowances:
     # Plotting for natural mode
-    #fig = plot_heatmaps_inv(after_data, epsilon_list, allowance, interactions, "natural")
-    #fig.savefig(f'final_figures/natural_heatmap_{allowance}.png', dpi=300, bbox_inches='tight')
+    fig = plot_heatmaps_inv(after_data, epsilon_list, allowance, interactions, "natural")
+    fig.savefig(f'final_figures/natural_heatmap_{allowance}.png', dpi=300, bbox_inches='tight')
 
     # Note: If you also want the inversed difference plots (where interactions vary), you would need to adjust the `plot_heatmaps_inv` function similarly to the way we adjusted `plot_heatmaps` and then call that new function here.
