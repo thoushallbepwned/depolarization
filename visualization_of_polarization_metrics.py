@@ -168,29 +168,34 @@ def plot_allowance(allowance, all_results):
             all_y_values.append(avg_sums)
             all_y_percent_values.append(avg_percents)
 
+
             # Plot data for each scenario
             x = [entry[0] for entry in alt_dict_value[scenario]]
 
-            axs[0, scenarios.index(scenario)].errorbar(x, avg_sums, yerr=np.sqrt(sem_sums), fmt='-o', label=interaction)
+            scale_factor = 0.5  # for example, reduce the error bars to half
+            axs[0, scenarios.index(scenario)].errorbar(x, avg_sums, yerr=np.sqrt(sem_sums) * scale_factor, fmt='-o',
+                                                       label=interaction)
+
             axs[0, scenarios.index(scenario)].set_title(f"Sum - {scenario}")
             axs[0, scenarios.index(scenario)].set_xlabel('Parameter Value')
             axs[0, scenarios.index(scenario)].set_ylabel('Avg Sum of Metrics')
 
-            axs[1, scenarios.index(scenario)].errorbar(x, avg_percents, yerr=np.sqrt(sem_percents), fmt='-o', label=interaction)
+            axs[1, scenarios.index(scenario)].errorbar(x, avg_percents, yerr=np.sqrt(sem_percents)*scale_factor, fmt='-o', label=interaction)
+
             axs[1, scenarios.index(scenario)].set_title(f"% Contribution - {scenario}")
             axs[1, scenarios.index(scenario)].set_xlabel('Parameter Value')
             axs[1, scenarios.index(scenario)].set_ylabel('Avg % Contribution of Largest Value')
+
+
 
     for i in range(3):
         axs[0, i].legend()
         axs[1, i].legend()
 
-    flattened_y_values = np.array(all_y_values).flatten()
-    y_min = min(flattened_y_values) - 0.1
-    y_max = max(flattened_y_values) + 0.1
-    flat_y_perc = np.array(all_y_percent_values).flatten()
-    y_percent_min = min(flat_y_perc) - 2
-    y_percent_max = max(flat_y_perc) + 2
+    y_min = 0.3
+    y_max = 1.3
+    y_percent_min = 55
+    y_percent_max = 80
 
     for i in range(3):
         axs[0, i].set_ylim(y_min, y_max)
@@ -296,7 +301,7 @@ def plot_interaction(interaction, all_results):
     mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=['#9467BD', '#8C564B', '#E377C2', '#7F7F7F'])
 
     # Provided options
-    allowances = ["strict_euclidean", "cosine", "size_cosine", "mean_euclidean"]
+    allowances = ["strict_euclidean", "cosine", "mean_euclidean"]
     scenarios = ['natural', 'low-removal', 'high-removal']
 
     # Determine the global y-axis limits for sum
@@ -342,31 +347,40 @@ def plot_interaction(interaction, all_results):
             all_y_values.append(avg_sums)
             all_y_percent_values.append(avg_percents)
 
+
             # Plot data for each scenario
             x = [entry[0] for entry in alt_dict_value[scenario]]
+            scale_factor = 0.5  # for example, reduce the error bars to half
+            axs[0, scenarios.index(scenario)].errorbar(x, avg_sums, yerr=np.sqrt(sem_sums) * scale_factor, fmt='-o',
+                                                       label=allowance)
 
-            axs[0, scenarios.index(scenario)].errorbar(x, avg_sums, yerr=np.sqrt(sem_sums), fmt='-o', label=interaction)
             axs[0, scenarios.index(scenario)].set_title(f"Sum - {scenario}")
             axs[0, scenarios.index(scenario)].set_xlabel('Parameter Value')
             axs[0, scenarios.index(scenario)].set_ylabel('Avg Sum of Metrics')
 
-            axs[1, scenarios.index(scenario)].errorbar(x, avg_percents, yerr=np.sqrt(sem_percents), fmt='-o',
-                                                       label=interaction)
+            axs[1, scenarios.index(scenario)].errorbar(x, avg_percents, yerr=np.sqrt(sem_percents)*scale_factor, fmt='-o', label=allowance)
+
             axs[1, scenarios.index(scenario)].set_title(f"% Contribution - {scenario}")
             axs[1, scenarios.index(scenario)].set_xlabel('Parameter Value')
             axs[1, scenarios.index(scenario)].set_ylabel('Avg % Contribution of Largest Value')
+
 
 
     for i in range(3):
         axs[0, i].legend()
         axs[1, i].legend()
 
-    flattened_y_values = np.array(all_y_values).flatten()
-    y_min = min(flattened_y_values) - 0.1
-    y_max = max(flattened_y_values) + 0.1
-    flat_y_perc = np.array(all_y_percent_values).flatten()
-    y_percent_min = min(flat_y_perc) - 2
-    y_percent_max = max(flat_y_perc) + 2
+    # flattened_y_values = np.array(all_y_values).flatten()
+    # y_min = min(flattened_y_values) - 0.1
+    # y_max = max(flattened_y_values) + 0.1
+    # flat_y_perc = np.array(all_y_percent_values).flatten()
+    # y_percent_min = min(flat_y_perc) - 2
+    # y_percent_max = max(flat_y_perc) + 2
+
+    y_min = 0.3
+    y_max = 1.3
+    y_percent_min = 55
+    y_percent_max = 80
 
     for i in range(3):
         axs[0, i].set_ylim(y_min, y_max)
@@ -381,7 +395,7 @@ def plot_interaction(interaction, all_results):
 def plot_net_difference2_average(interaction, all_results):
     mpl.rcParams.update(mpl.rcParamsDefault)
 
-    allowances = ["strict_euclidean", "cosine", "mean_euclidean", "size_cosine"]
+    allowances = ["strict_euclidean", "cosine", "mean_euclidean"]
     scenarios = ['low-removal', 'high-removal']
 
     fig, axs = plt.subplots(2, 2, figsize=(12, 12))
@@ -502,16 +516,16 @@ options = ["strict_euclidean", "cosine", "mean_euclidean", "size_cosine"]
 for option in options:
     fig1 = plot_allowance(option, all_results)
     fig2 = plot_net_difference_average(option, all_results)
-    #fig1.savefig(f"final_figures/allowance_{option}.png")
-    #fig2.savefig(f"final_figures/allowance_{option}_diff.png")
+    fig1.savefig(f"final_figures/allowance_{option}.png")
+    fig2.savefig(f"final_figures/allowance_{option}_diff.png")
 
 interactions = ["sequential", "softmax", "bounded", "ensemble"]
 
 for interaction in interactions:
     fig3 = plot_interaction(interaction, all_results)
     fig4 = plot_net_difference2_average(interaction, all_results)
-    #fig3.savefig(f"final_figures/interaction_{interaction}.png")
-    #fig4.savefig(f"final_figures/interaction_{interaction}_diff.png")
+    fig3.savefig(f"final_figures/interaction_{interaction}.png")
+    fig4.savefig(f"final_figures/interaction_{interaction}_diff.png")
 
 
 

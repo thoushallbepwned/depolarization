@@ -160,7 +160,7 @@ class AlgorithmicBiasModel_nd(DiffusionModel):
             #seed_list = [42,420, 1337, 299792489, 1442, 100]
 
             #choice = random.choice(seed_list)
-            np.random.seed(8792)
+            np.random.seed(2180)
 
         def Extract(lst):
             return [item[0] for item in lst]

@@ -417,9 +417,9 @@ if __name__ == "__main__":
 
     noise = ["noiseless"]#eless"]#["noisy"]#,"noiseless"]
     operation_list = ["sequential", "softmax","bounded", "ensemble"]
-    method_list = ["strict_euclidean", "cosine", "mean_euclidean", "size_cosine"]#, "strict_euclidean"]#, "size_cosine"]#["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
+    method_list = ["strict_euclidean", "cosine", "mean_euclidean"]#, "size_cosine"]#, "strict_euclidean"]#, "size_cosine"]#["mean_euclidean"]#, "strict_euclidean", "cosine", "size_cosine"]
     seeding_list = ["mixed"]#, "normal", "polarized"]
-    intervention_status = ["natural", "predicted", "high-removal", "low-removal"]#["natural", "intervened", "targeted"]
+    intervention_status = ["natural", "high-removal", "low-removal"]#["natural", "intervened", "targeted"]
 
     operation_results_nat = {"sequential": [], "softmax": [], "bounded": [], "ensemble": []}
     operation_results_pred = {"sequential": [], "softmax": [], "bounded": [], "ensemble": []}
@@ -428,6 +428,8 @@ if __name__ == "__main__":
 
     def subtract_arrays(array1, array2):
         return array1 - array2
+
+    randoms = [413516,5283925, 114, 4920, 2180, 294]
 
     for noise_mode in noise:
 
@@ -475,7 +477,7 @@ if __name__ == "__main__":
                     print(operation_results_Lrem)
 
 
-                with open('simulation_results_8792.pkl', 'wb') as f:
+                with open('simulation_results_2180.pkl', 'wb') as f:
                     pickle.dump(all_results, f)
         # # Compute the delta values
         # delta_Hrem = {}
