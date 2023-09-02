@@ -24,107 +24,199 @@ import matplotlib.pyplot as plt
 import matplotlib as mpl
 
 
-def plot_allowance(allowance, all_results):
-    mpl.rcParams.update(mpl.rcParamsDefault)
-    # Provided options
-    interactions = ["sequential", "softmax", "bounded", "ensemble"]
-    scenarios = ['natural', 'low-removal', 'high-removal']
-    label_map = {
-        "mean_euclidean": "L$_2$",
-        "strict_euclidean": "L$_\infty$",
-        "softmax": "proportional",
-        "cosine": "cosine"
-    }
-    scale_factor = 0.5
-    # Create subplots
-    fig, axs = plt.subplots(2, 3, figsize=(20, 12))
+# def plot_allowance(allowance, all_results):
+#     mpl.rcParams.update(mpl.rcParamsDefault)
+#     # Provided options
+#     interactions = ["sequential", "softmax", "bounded", "ensemble"]
+#     scenarios = ['natural', 'low-removal', 'high-removal']
+#     label_map = {
+#         "mean_euclidean": "L$_2$",
+#         "strict_euclidean": "L$_\infty$",
+#         "softmax": "proportional",
+#         "cosine": "cosine"
+#     }
+#     scale_factor = 0.5
+#     # Create subplots
+#     fig, axs = plt.subplots(2, 3, figsize=(20, 12))
+#
+#     # Determine the global y-axis limits for sum
+#     all_y_values = []
+#
+#     # Determine the global y-axis limits for % contribution
+#     all_y_percent_values = []
+#
+#     for interaction in interactions:
+#         all_sums = {scenario: [] for scenario in scenarios}
+#         all_percents = {scenario: [] for scenario in scenarios}
+#
+#         for loaded_results in all_results:
+#             for param_value in [0.2]:
+#                 key_to_retrieve = ('noiseless', interaction, allowance, 'mixed', param_value)
+#
+#                 if key_to_retrieve not in loaded_results:
+#                     continue
+#
+#                 value = loaded_results[key_to_retrieve]
+#                 alt_dict_value = value[1]
+#
+#                 for scenario in scenarios:
+#                     sums = [np.sum(entry[1]) for entry in alt_dict_value[scenario]]
+#                     percents = [max(entry[1]) / np.sum(entry[1]) * 100 for entry in alt_dict_value[scenario]]
+#
+#                     all_sums[scenario].append(sums)
+#                     all_percents[scenario].append(percents)
+#
+#         for scenario in scenarios:
+#             avg_sums = np.mean(all_sums[scenario], axis=0)
+#             #var_sums = np.var(all_sums[scenario], axis=0)
+#
+#             n_sums = len(all_sums[scenario])
+#             n_percents = len(all_percents[scenario])
+#
+#             avg_percents = np.mean(all_percents[scenario], axis=0)
+#             #var_percents = np.var(all_percents[scenario], axis=0)
+#
+#             sem_sums = np.std(all_sums[scenario], axis=0) / np.sqrt(n_sums)
+#             sem_percents = np.std(all_percents[scenario], axis=0) / np.sqrt(n_percents)
+#
+#             all_y_values.append(avg_sums)
+#             all_y_percent_values.append(avg_percents)
+#
+#             # Plot data for each scenario
+#             x = [entry[0] for entry in alt_dict_value[scenario]]
+#
+#             axs[0, scenarios.index(scenario)].errorbar(x, avg_sums, yerr=np.sqrt(sem_sums)*scale_factor, fmt='-o',
+#                                                        label=label_map.get(interaction, interaction))
+#             axs[0, scenarios.index(scenario)].set_title(f"Intervention mode - {scenario}")
+#             #axs[0, scenarios.index(scenario)].set_xlabel('Epsilon Value')
+#             axs[0, scenarios.index(scenario)].set_ylabel('Summmed fragmentation')
+#
+#             axs[1, scenarios.index(scenario)].errorbar(x, avg_percents, yerr=np.sqrt(sem_percents)*scale_factor, fmt='-o', label=label_map.get(interaction, interaction))
+#
+#             #axs[1, scenarios.index(scenario)].set_title(f"Intervention mode - {scenario}")
+#             axs[1, scenarios.index(scenario)].set_xlabel('Epsilon Value')
+#             axs[1, scenarios.index(scenario)].set_ylabel('Principal component fragmentation (PCF) in %')
+#
+#     for i in range(3):
+#         axs[0, i].legend()
+#         axs[1, i].legend()
+#
+#     flattened_y_values = np.array(all_y_values).flatten()
+#     y_min = 0.3
+#     y_max = 1.3
+#     y_percent_min = 55
+#     y_percent_max = 80
+#     #y_min = min(flattened_y_values) - 0.1
+#     #y_max = max(flattened_y_values) + 0.1
+#     flat_y_perc = np.array(all_y_percent_values).flatten()
+#     #y_percent_min = min(flat_y_perc) - 2
+#     #y_percent_max = max(flat_y_perc) + 2
+#
+#     for i in range(3):
+#         axs[0, i].set_ylim(y_min, y_max)
+#         axs[1, i].set_ylim(y_percent_min, y_percent_max)
+#
+#
+#     plt.tight_layout(pad=1.0, h_pad=1.5, w_pad=1.0, rect=None)
+#     plt.subplots_adjust(top=0.93)
+#     plt.suptitle(f"Allowance: {label_map.get(allowance, allowance)}", fontsize=24, y=0.98)
+#
+#     plt.show()
+#     return fig
 
-    # Determine the global y-axis limits for sum
-    all_y_values = []
 
-    # Determine the global y-axis limits for % contribution
-    all_y_percent_values = []
-
-    for interaction in interactions:
-        all_sums = {scenario: [] for scenario in scenarios}
-        all_percents = {scenario: [] for scenario in scenarios}
-
-        for loaded_results in all_results:
-            for param_value in [0.2]:
-                key_to_retrieve = ('noiseless', interaction, allowance, 'mixed', param_value)
-
-                if key_to_retrieve not in loaded_results:
-                    continue
-
-                value = loaded_results[key_to_retrieve]
-                alt_dict_value = value[1]
-
-                for scenario in scenarios:
-                    sums = [np.sum(entry[1]) for entry in alt_dict_value[scenario]]
-                    percents = [max(entry[1]) / np.sum(entry[1]) * 100 for entry in alt_dict_value[scenario]]
-
-                    all_sums[scenario].append(sums)
-                    all_percents[scenario].append(percents)
-
-        for scenario in scenarios:
-            avg_sums = np.mean(all_sums[scenario], axis=0)
-            #var_sums = np.var(all_sums[scenario], axis=0)
-
-            n_sums = len(all_sums[scenario])
-            n_percents = len(all_percents[scenario])
-
-            avg_percents = np.mean(all_percents[scenario], axis=0)
-            #var_percents = np.var(all_percents[scenario], axis=0)
-
-            sem_sums = np.std(all_sums[scenario], axis=0) / np.sqrt(n_sums)
-            sem_percents = np.std(all_percents[scenario], axis=0) / np.sqrt(n_percents)
-
-            all_y_values.append(avg_sums)
-            all_y_percent_values.append(avg_percents)
-
-            # Plot data for each scenario
-            x = [entry[0] for entry in alt_dict_value[scenario]]
-
-            axs[0, scenarios.index(scenario)].errorbar(x, avg_sums, yerr=np.sqrt(sem_sums)*scale_factor, fmt='-o',
-                                                       label=label_map.get(interaction, interaction))
-            axs[0, scenarios.index(scenario)].set_title(f"Intervention mode - {scenario}")
-            #axs[0, scenarios.index(scenario)].set_xlabel('Epsilon Value')
-            axs[0, scenarios.index(scenario)].set_ylabel('Summmed fragmentation')
-
-            axs[1, scenarios.index(scenario)].errorbar(x, avg_percents, yerr=np.sqrt(sem_percents)*scale_factor, fmt='-o', label=label_map.get(interaction, interaction))
-
-            #axs[1, scenarios.index(scenario)].set_title(f"Intervention mode - {scenario}")
-            axs[1, scenarios.index(scenario)].set_xlabel('Epsilon Value')
-            axs[1, scenarios.index(scenario)].set_ylabel('Principal component fragmentation (PCF) in %')
-
-    for i in range(3):
-        axs[0, i].legend()
-        axs[1, i].legend()
-
-    flattened_y_values = np.array(all_y_values).flatten()
-    y_min = 0.3
-    y_max = 1.3
-    y_percent_min = 55
-    y_percent_max = 80
-    #y_min = min(flattened_y_values) - 0.1
-    #y_max = max(flattened_y_values) + 0.1
-    flat_y_perc = np.array(all_y_percent_values).flatten()
-    #y_percent_min = min(flat_y_perc) - 2
-    #y_percent_max = max(flat_y_perc) + 2
-
-    for i in range(3):
-        axs[0, i].set_ylim(y_min, y_max)
-        axs[1, i].set_ylim(y_percent_min, y_percent_max)
-
-
-    plt.tight_layout(pad=1.0, h_pad=1.5, w_pad=1.0, rect=None)
-    plt.subplots_adjust(top=0.93)
-    plt.suptitle(f"Allowance: {label_map.get(allowance, allowance)}", fontsize=24, y=0.98)
-
-    plt.show()
-    return fig
-
-
+# def plot_interaction(interaction, all_results):
+#     import matplotlib.pyplot as plt
+#     import matplotlib as mpl
+#     import numpy as np
+#
+#     mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=['#9467BD', '#8C564B', '#E377C2', '#7F7F7F'])
+#
+#     # Provided options
+#     allowances = ["strict_euclidean", "cosine", "mean_euclidean"]
+#     scenarios = ['natural', 'low-removal', 'high-removal']
+#
+#     # Map to renamed labels
+#     label_map = {
+#         "mean_euclidean": "L$_2$",
+#         "strict_euclidean": "L$_\infty$",
+#         "softmax": "proportional",
+#         "cosine": "cosine"
+#     }
+#     scale_factor = 0.5
+#     # Determine the global y-axis limits for sum
+#     all_y_values = []
+#     # Determine the global y-axis limits for % contribution
+#     all_y_percent_values = []
+#
+#     # Create subplots
+#     fig, axs = plt.subplots(2, 3, figsize=(20, 12))
+#
+#     for allowance in allowances:
+#         all_sums = {scenario: [] for scenario in scenarios}
+#         all_percents = {scenario: [] for scenario in scenarios}
+#
+#         for loaded_results in all_results:
+#             key_to_retrieve = ('noiseless', interaction, allowance, 'mixed', 0.20)
+#             if key_to_retrieve not in loaded_results:
+#                 print("are we getting stuck here?")
+#                 continue
+#
+#             value = loaded_results[key_to_retrieve]
+#             alt_dict_value = value[1]
+#
+#             for scenario in scenarios:
+#                 sums = [np.sum(entry[1]) for entry in alt_dict_value[scenario]]
+#                 percents = [max(entry[1]) / np.sum(entry[1]) * 100 for entry in alt_dict_value[scenario]]
+#
+#                 all_sums[scenario].append(sums)
+#                 all_percents[scenario].append(percents)
+#
+#         for scenario in scenarios:
+#             avg_sums = np.mean(all_sums[scenario], axis=0)
+#             n_sums = len(all_sums[scenario])
+#             n_percents = len(all_percents[scenario])
+#
+#             sem_sums = np.std(all_sums[scenario], axis=0) / np.sqrt(n_sums)
+#             sem_percents = np.std(all_percents[scenario], axis=0) / np.sqrt(n_percents)
+#
+#             avg_percents = np.mean(all_percents[scenario], axis=0)
+#
+#             all_y_values.append(avg_sums)
+#             all_y_percent_values.append(avg_percents)
+#
+#             # Plot data for each scenario
+#             x = [entry[0] for entry in alt_dict_value[scenario]]
+#
+#             # Use the label_map to get the correct label name
+#             axs[0, scenarios.index(scenario)].errorbar(x, avg_sums, yerr=np.sqrt(sem_sums)*scale_factor, fmt='-o', label=label_map.get(allowance, allowance))
+#             axs[0, scenarios.index(scenario)].set_title(f"Intervention mode - {scenario}")
+#             # axs[0, scenarios.index(scenario)].set_xlabel('Epsilon Value')
+#             axs[0, scenarios.index(scenario)].set_ylabel('Summmed fragmentation')
+#
+#             axs[1, scenarios.index(scenario)].errorbar(x, avg_percents, yerr=np.sqrt(sem_percents)*scale_factor, fmt='-o', label=label_map.get(allowance, allowance))
+#             axs[1, scenarios.index(scenario)].set_xlabel('Epsilon Value')
+#             axs[1, scenarios.index(scenario)].set_ylabel('Principal component fragmentation (PCF) in %')
+#
+#     for i in range(3):
+#         axs[0, i].legend()
+#         axs[1, i].legend()
+#
+#     y_min = 0.3
+#     y_max = 1.3
+#     y_percent_min = 55
+#     y_percent_max = 80
+#
+#     for i in range(3):
+#         axs[0, i].set_ylim(y_min, y_max)
+#         axs[1, i].set_ylim(y_percent_min, y_percent_max)
+#
+#     plt.tight_layout(pad=1.0, h_pad=1.5, w_pad=1.0, rect=None)
+#     plt.subplots_adjust(top=0.93)
+#     plt.suptitle(f"Interaction: {label_map.get(interaction, interaction)}", fontsize=24, y=0.98)
+#
+#     plt.show()
+#     return fig
 def plot_interaction(interaction, all_results):
     import matplotlib.pyplot as plt
     import matplotlib as mpl
@@ -132,11 +224,9 @@ def plot_interaction(interaction, all_results):
 
     mpl.rcParams['axes.prop_cycle'] = mpl.cycler(color=['#9467BD', '#8C564B', '#E377C2', '#7F7F7F'])
 
-    # Provided options
     allowances = ["strict_euclidean", "cosine", "mean_euclidean"]
     scenarios = ['natural', 'low-removal', 'high-removal']
 
-    # Map to renamed labels
     label_map = {
         "mean_euclidean": "L$_2$",
         "strict_euclidean": "L$_\infty$",
@@ -144,13 +234,14 @@ def plot_interaction(interaction, all_results):
         "cosine": "cosine"
     }
     scale_factor = 0.5
-    # Determine the global y-axis limits for sum
-    all_y_values = []
-    # Determine the global y-axis limits for % contribution
-    all_y_percent_values = []
 
-    # Create subplots
     fig, axs = plt.subplots(2, 3, figsize=(20, 12))
+
+    # Pre-intervention values will be determined from the earliest epsilon values
+    pre_intervention_values = {}
+
+    all_y_values = []
+    all_y_percent_values = []
 
     for allowance in allowances:
         all_sums = {scenario: [] for scenario in scenarios}
@@ -167,6 +258,11 @@ def plot_interaction(interaction, all_results):
 
             for scenario in scenarios:
                 sums = [np.sum(entry[1]) for entry in alt_dict_value[scenario]]
+
+                # Populate pre-intervention values from earliest epsilon iteration for each scenario
+                if scenario not in pre_intervention_values:
+                    pre_intervention_values[scenario] = sums[0]
+
                 percents = [max(entry[1]) / np.sum(entry[1]) * 100 for entry in alt_dict_value[scenario]]
 
                 all_sums[scenario].append(sums)
@@ -174,25 +270,22 @@ def plot_interaction(interaction, all_results):
 
         for scenario in scenarios:
             avg_sums = np.mean(all_sums[scenario], axis=0)
+            relative_change = (avg_sums - pre_intervention_values[scenario]) / pre_intervention_values[scenario] * 100
             n_sums = len(all_sums[scenario])
             n_percents = len(all_percents[scenario])
 
+            avg_percents = np.mean(all_percents[scenario], axis=0)
             sem_sums = np.std(all_sums[scenario], axis=0) / np.sqrt(n_sums)
             sem_percents = np.std(all_percents[scenario], axis=0) / np.sqrt(n_percents)
 
-            avg_percents = np.mean(all_percents[scenario], axis=0)
-
-            all_y_values.append(avg_sums)
+            all_y_values.append(relative_change)
             all_y_percent_values.append(avg_percents)
 
-            # Plot data for each scenario
             x = [entry[0] for entry in alt_dict_value[scenario]]
 
-            # Use the label_map to get the correct label name
-            axs[0, scenarios.index(scenario)].errorbar(x, avg_sums, yerr=np.sqrt(sem_sums)*scale_factor, fmt='-o', label=label_map.get(allowance, allowance))
+            axs[0, scenarios.index(scenario)].errorbar(x, relative_change, yerr=np.sqrt(sem_sums)*scale_factor, fmt='-o', label=label_map.get(allowance, allowance))
             axs[0, scenarios.index(scenario)].set_title(f"Intervention mode - {scenario}")
-            # axs[0, scenarios.index(scenario)].set_xlabel('Epsilon Value')
-            axs[0, scenarios.index(scenario)].set_ylabel('Summmed fragmentation')
+            axs[0, scenarios.index(scenario)].set_ylabel('Relative Change in Polarization (%)')
 
             axs[1, scenarios.index(scenario)].errorbar(x, avg_percents, yerr=np.sqrt(sem_percents)*scale_factor, fmt='-o', label=label_map.get(allowance, allowance))
             axs[1, scenarios.index(scenario)].set_xlabel('Epsilon Value')
@@ -202,10 +295,12 @@ def plot_interaction(interaction, all_results):
         axs[0, i].legend()
         axs[1, i].legend()
 
-    y_min = 0.3
-    y_max = 1.3
-    y_percent_min = 55
-    y_percent_max = 80
+    flattened_y_values = np.array(all_y_values).flatten()
+    y_min = min(flattened_y_values) - 10
+    y_max = max(flattened_y_values) + 10
+    flat_y_perc = np.array(all_y_percent_values).flatten()
+    y_percent_min = min(flat_y_perc) - 2
+    y_percent_max = max(flat_y_perc) + 2
 
     for i in range(3):
         axs[0, i].set_ylim(y_min, y_max)
@@ -214,9 +309,10 @@ def plot_interaction(interaction, all_results):
     plt.tight_layout(pad=1.0, h_pad=1.5, w_pad=1.0, rect=None)
     plt.subplots_adjust(top=0.93)
     plt.suptitle(f"Interaction: {label_map.get(interaction, interaction)}", fontsize=24, y=0.98)
-
     plt.show()
+
     return fig
+
 
 def plot_net_difference_average(allowance, all_results):
     mpl.rcParams.update(mpl.rcParamsDefault)
@@ -264,14 +360,18 @@ def plot_net_difference_average(allowance, all_results):
                 scenario_values = alt_dict_value[scenario]
 
                 # For sum differences
-                sum_diffs = [np.sum(entry[1]) - np.sum(natural_entry[1]) for entry, natural_entry in
+                sum_diffs = [(np.sum(entry[1]) - np.sum(natural_entry[1]))*100 for entry, natural_entry in
                              zip(scenario_values, natural_values)]
                 sum_diff_vals.append(sum_diffs)
 
                 # For % contribution differences
-                percent_diffs = [
-                    max(entry[1]) / np.sum(entry[1]) * 100 - max(natural_entry[1]) / np.sum(natural_entry[1]) * 100 for
+                percent_diffs = [max(entry[1]) / np.sum(entry[1]) * 100 - max(natural_entry[1]) / np.sum(natural_entry[1]) * 100 for
                     entry, natural_entry in zip(scenario_values, natural_values)]
+
+                # percent_diffs = [(max(entry[1]) / np.sum(entry[1]) * 100 - max(natural_entry[1]) / np.sum(
+                #     natural_entry[1]) * 100) / (max(natural_entry[1]) / np.sum(natural_entry[1]) * 100) * 100 for
+                #                             entry, natural_entry in zip(scenario_values, natural_values)]
+
                 percent_diff_vals.append(percent_diffs)
 
             avg_diffs[interaction][scenario] = np.mean(sum_diff_vals, axis=0)
@@ -282,8 +382,8 @@ def plot_net_difference_average(allowance, all_results):
             all_y_sum_diff_values.extend(avg_diffs[interaction][scenario])
             all_y_percent_diff_values.extend(avg_percent_diffs[interaction][scenario])
 
-    y_sum_diff_min = min(all_y_sum_diff_values) - 0.1
-    y_sum_diff_max = max(all_y_sum_diff_values) + 0.1
+    y_sum_diff_min = min(all_y_sum_diff_values) - 5
+    y_sum_diff_max = max(all_y_sum_diff_values) + 5
     y_percent_diff_min = min(all_y_percent_diff_values) - 5
     y_percent_diff_max = max(all_y_percent_diff_values) + 5
 
@@ -298,7 +398,7 @@ def plot_net_difference_average(allowance, all_results):
             axs[0, i].set_title(f"Intervention - {scenario}")
             axs[0, i].set_xlabel('Epsilon Value')
             axs[0, i].set_xticks(x_ticks)  # Set x-axis ticks
-            axs[0, i].set_ylabel('$\Delta$ Summed Fragmentation')
+            axs[0, i].set_ylabel('Effectiveness of intervention on cumulative fragmentation')
             axs[0, i].set_ylim(y_sum_diff_min, y_sum_diff_max)
             axs[0, i].legend()
 
@@ -360,7 +460,7 @@ def plot_net_difference2_average(interaction, all_results):
                 scenario_values = alt_dict_value[scenario]
 
                 # For sum differences
-                sum_diffs = [np.sum(entry[1]) - np.sum(natural_entry[1]) for entry, natural_entry in
+                sum_diffs = [(np.sum(entry[1]) - np.sum(natural_entry[1]))*100 for entry, natural_entry in
                              zip(scenario_values, natural_values)]
                 sum_diff_vals.append(sum_diffs)
 
@@ -381,8 +481,8 @@ def plot_net_difference2_average(interaction, all_results):
             all_y_sum_diff_values.extend(avg_diffs[allowance][scenario])
             all_y_percent_diff_values.extend(avg_percent_diffs[allowance][scenario])
 
-    y_sum_diff_min = min(all_y_sum_diff_values) - 0.1
-    y_sum_diff_max = max(all_y_sum_diff_values) + 0.1
+    y_sum_diff_min = min(all_y_sum_diff_values) - 10
+    y_sum_diff_max = max(all_y_sum_diff_values) + 10
     y_percent_diff_min = min(all_y_percent_diff_values) - 5
     y_percent_diff_max = max(all_y_percent_diff_values) + 5
 
@@ -423,6 +523,97 @@ def plot_net_difference2_average(interaction, all_results):
     return fig
 
 
+def plot_allowance_2(allowance, all_results):
+    mpl.rcParams.update(mpl.rcParamsDefault)
+    interactions = ["sequential", "softmax", "bounded", "ensemble"]
+    scenarios = ['natural', 'low-removal', 'high-removal']
+    label_map = {
+        "mean_euclidean": "L$_2$",
+        "strict_euclidean": "L$_\infty$",
+        "softmax": "proportional",
+        "cosine": "cosine"
+    }
+    scale_factor = 0.5
+
+    # Pre-intervention values will be determined from the earliest epsilon values
+    pre_intervention_values = {}
+
+    fig, axs = plt.subplots(2, 3, figsize=(20, 12))
+    all_y_values = []
+    all_y_percent_values = []
+
+    for interaction in interactions:
+        all_sums = {scenario: [] for scenario in scenarios}
+        all_percents = {scenario: [] for scenario in scenarios}
+
+        for loaded_results in all_results:
+            for param_value in [0.2]:
+                key_to_retrieve = ('noiseless', interaction, allowance, 'mixed', param_value)
+                if key_to_retrieve not in loaded_results:
+                    continue
+
+                value = loaded_results[key_to_retrieve]
+                alt_dict_value = value[1]
+                for scenario in scenarios:
+                    sums = [np.sum(entry[1]) for entry in alt_dict_value[scenario]]
+
+                    # Populate pre-intervention values from earliest epsilon iteration for each scenario
+                    if scenario not in pre_intervention_values:
+                        pre_intervention_values[scenario] = sums[0]
+
+                    percents = [max(entry[1]) / np.sum(entry[1]) * 100 for entry in alt_dict_value[scenario]]
+
+                    all_sums[scenario].append(sums)
+                    all_percents[scenario].append(percents)
+
+        for scenario in scenarios:
+            avg_sums = np.mean(all_sums[scenario], axis=0)
+            relative_change = (avg_sums - pre_intervention_values[scenario]) / pre_intervention_values[scenario] * 100
+            n_sums = len(all_sums[scenario])
+            n_percents = len(all_percents[scenario])
+
+            avg_percents = np.mean(all_percents[scenario], axis=0)
+            sem_sums = np.std(all_sums[scenario], axis=0) / np.sqrt(n_sums)
+            sem_percents = np.std(all_percents[scenario], axis=0) / np.sqrt(n_percents)
+
+            all_y_values.append(relative_change)
+            all_y_percent_values.append(avg_percents)
+
+            x = [entry[0] for entry in alt_dict_value[scenario]]
+
+            axs[0, scenarios.index(scenario)].errorbar(x, relative_change, yerr=np.sqrt(sem_sums) * scale_factor,
+                                                       fmt='-o',
+                                                       label=label_map.get(interaction, interaction))
+            axs[0, scenarios.index(scenario)].set_title(f"Intervention mode - {scenario}")
+            axs[0, scenarios.index(scenario)].set_ylabel('Relative Change in Polarization (%)')
+
+            axs[1, scenarios.index(scenario)].errorbar(x, avg_percents, yerr=np.sqrt(sem_percents) * scale_factor,
+                                                       fmt='-o', label=label_map.get(interaction, interaction))
+            axs[1, scenarios.index(scenario)].set_xlabel('Epsilon Value')
+            axs[1, scenarios.index(scenario)].set_ylabel('Principal component fragmentation (PCF) in %')
+
+    for i in range(3):
+        axs[0, i].legend()
+        axs[1, i].legend()
+
+    flattened_y_values = np.array(all_y_values).flatten()
+    y_min = min(flattened_y_values) - 10
+    y_max = max(flattened_y_values) + 10
+    flat_y_perc = np.array(all_y_percent_values).flatten()
+    y_percent_min = min(flat_y_perc) - 2
+    y_percent_max = max(flat_y_perc) + 2
+
+    for i in range(3):
+        axs[0, i].set_ylim(y_min, y_max)
+        axs[1, i].set_ylim(y_percent_min, y_percent_max)
+
+    plt.tight_layout(pad=1.0, h_pad=1.5, w_pad=1.0, rect=None)
+    plt.subplots_adjust(top=0.93)
+    plt.suptitle(f"Allowance: {label_map.get(allowance, allowance)}", fontsize=24, y=0.98)
+    plt.show()
+    return fig
+
+
 # Example usage:
 
 import os
@@ -450,16 +641,17 @@ for filename in pickle_files:
 
 
 options = ["strict_euclidean", "cosine", "mean_euclidean"]
-for option in options:
-    fig1 = plot_allowance(option, all_results)
-    fig2 = plot_net_difference_average(option, all_results)
-    fig1.savefig(f"final_figures/allowance_{option}.png")
-    fig2.savefig(f"final_figures/allowance_{option}_diff.png")
+#for option in options:
+    #fig1 = plot_allowance(option, all_results)
+    #fig3 = plot_allowance_2(option, all_results)
+    #fig2 = plot_net_difference_average(option, all_results)
+    # fig1.savefig(f"final_figures/allowance_{option}.png")
+    # fig2.savefig(f"final_figures/allowance_{option}_diff.png")
 
 interactions = ["sequential", "softmax", "bounded", "ensemble"]
 
 for interaction in interactions:
-    fig3 = plot_interaction(interaction, all_results)
-    fig4 = plot_net_difference2_average(interaction, all_results)
-    fig3.savefig(f"final_figures/interaction_{interaction}.png")
-    fig4.savefig(f"final_figures/interaction_{interaction}_diff.png")
+     fig3 = plot_interaction(interaction, all_results)
+     fig4 = plot_net_difference2_average(interaction, all_results)
+#     fig3.savefig(f"final_figures/interaction_{interaction}.png")
+#     fig4.savefig(f"final_figures/interaction_{interaction}_diff.png")
